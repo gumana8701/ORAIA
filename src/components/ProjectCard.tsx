@@ -3,40 +3,44 @@ import Link from 'next/link'
 import { Proyecto } from '@/lib/types'
 import StatusBadge from './StatusBadge'
 
-const prioColor = { alta: 'bg-red-500', media: 'bg-yellow-500', baja: 'bg-gray-500' }
+const prioColor: Record<string, string> = {
+  alta: '#ef4444', media: '#eab308', baja: '#6b7280'
+}
 
 export default function ProjectCard({ proyecto }: { proyecto: Proyecto }) {
   return (
-    <Link href={`/proyectos/${proyecto.id}`}>
-      <div className="glass p-5 hover:border-accent/30 hover:shadow-glow-sm transition-all duration-200 cursor-pointer group">
-        <div className="flex items-start justify-between mb-3">
+    <Link href={`/proyectos/${proyecto.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+      <div style={{ background: 'rgba(17,24,39,0.85)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '12px', padding: '20px', cursor: 'pointer', transition: 'border-color 0.2s' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`w-2 h-2 rounded-full ${prioColor[proyecto.prioridad]}`} />
-              <h3 className="font-semibold text-white group-hover:text-accent transition-colors">{proyecto.nombre}</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: prioColor[proyecto.prioridad], display: 'inline-block' }} />
+              <h3 style={{ fontWeight: 600, color: '#fff', margin: 0 }}>{proyecto.nombre}</h3>
             </div>
-            <p className="text-xs text-muted">{proyecto.cliente}</p>
+            <p style={{ fontSize: '12px', color: '#A0AEC0', margin: 0 }}>{proyecto.cliente}</p>
           </div>
           <StatusBadge estado={proyecto.estado} />
         </div>
         {proyecto.mensajeReciente && (
-          <p className="text-sm text-muted/80 mb-4 line-clamp-2 italic">&ldquo;{proyecto.mensajeReciente}&rdquo;</p>
+          <p style={{ fontSize: '13px', color: 'rgba(160,174,192,0.8)', fontStyle: 'italic', marginBottom: '16px' }}>
+            &ldquo;{proyecto.mensajeReciente}&rdquo;
+          </p>
         )}
-        <div className="mb-3">
-          <div className="flex justify-between text-xs text-muted mb-1">
+        <div style={{ marginBottom: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#A0AEC0', marginBottom: '4px' }}>
             <span>Progreso</span><span>{proyecto.progreso}%</span>
           </div>
-          <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-            <div className="h-full bg-accent rounded-full" style={{ width: `${proyecto.progreso}%` }} />
+          <div style={{ height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '9999px', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${proyecto.progreso}%`, background: '#E8792F', borderRadius: '9999px' }} />
           </div>
         </div>
-        <div className="flex items-center justify-between text-xs text-muted">
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#A0AEC0' }}>
           <span>{proyecto.responsable}</span><span>{proyecto.ultimaActividad}</span>
         </div>
         {proyecto.tags && proyecto.tags.length > 0 && (
-          <div className="flex gap-1 mt-3">
+          <div style={{ display: 'flex', gap: '4px', marginTop: '12px' }}>
             {proyecto.tags.map(tag => (
-              <span key={tag} className="text-[10px] px-2 py-0.5 rounded bg-accent/10 text-accent border border-accent/20">{tag}</span>
+              <span key={tag} style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '4px', background: 'rgba(232,121,47,0.1)', color: '#E8792F', border: '1px solid rgba(232,121,47,0.2)' }}>{tag}</span>
             ))}
           </div>
         )}
