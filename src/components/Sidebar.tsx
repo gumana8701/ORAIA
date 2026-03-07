@@ -1,17 +1,14 @@
 import Image from 'next/image';
 
-function Sidebar() {
+const Sidebar = () => {
   return (
-    <div>
-      <Image 
-        src="/public/logo.png" 
-        alt="Logo" 
-        style={{ width: '100%', height: 'auto', maxWidth: '100px', maxHeight: '100px', objectFit: 'contain' }} 
-      />
-      <h1>ORA IA</h1>
-      <h2>Your subtitle here</h2>
+    <div className="sidebar">
+      <div className="logo">
+        <Image src="/logo.png" alt="Logo" width={100} height={100} layout="responsive" />
+      </div>
+      {/* Original sidebar code here */}
     </div>
   );
-}
+};
 
 export default Sidebar;
