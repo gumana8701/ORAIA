@@ -6,44 +6,162 @@ import StatusBadge from './StatusBadge'
 const prioColor: Record<string, string> = {
   alta: '#ef4444', media: '#eab308', baja: '#6b7280'
 }
+const prioLabel: Record<string, string> = {
+  alta: 'Alta', media: 'Media', baja: 'Baja'
+}
 
-export default function ProjectCard({ proyecto }: { proyecto: Proyecto }) {
+function timeAgo(iso?: string): string {
+  if (!iso) return '—'
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins  = Math.floor(diff / 60000)
+  const hours = Math.floor(mins / 60)
+  const days  = Math.floor(hours / 24)
+  if (days > 30) return new Date(iso).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })
+  if (days > 0)  return `hace ${days}d`
+  if (hours > 0) return `hace ${hours}h`
+  if (mins > 0)  return `hace ${mins}m`
+  return 'ahora'
+}
+
+export default function ProjectCard({ proyecto, developers = [] }: { proyecto: Proyecto; developers?: any[] }) {
+  const hasAlerts = (proyecto.alertas_count ?? 0) > 0
+  const isRisk    = proyecto.estado === 'en_riesgo'
+  const isActive  = proyecto.estado === 'activo'
+
+  const borderColor = isRisk
+    ? 'rgba(239,68,68,0.30)'
+    : hasAlerts
+      ? 'rgba(245,158,11,0.28)'
+      : 'rgba(255,255,255,0.07)'
+
+  const glowShadow = isRisk
+    ? '0 0 20px rgba(239,68,68,0.08)'
+    : hasAlerts
+      ? '0 0 16px rgba(245,158,11,0.06)'
+      : 'none'
+
   return (
-    <Link href={`/proyectos/${proyecto.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
-      <div style={{ background: 'rgba(17,24,39,0.85)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '12px', padding: '20px', cursor: 'pointer', transition: 'border-color 0.2s' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: prioColor[proyecto.prioridad], display: 'inline-block' }} />
-              <h3 style={{ fontWeight: 600, color: '#fff', margin: 0 }}>{proyecto.nombre}</h3>
+    <Link href={`/proyectos/${proyecto.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}>
+      <div
+        className="project-card"
+        style={{
+          background: 'rgba(17,24,39,0.65)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          border: `1px solid ${borderColor}`,
+          borderRadius: '14px',
+          padding: '20px',
+          cursor: 'pointer',
+          height: '100%',
+          boxSizing: 'border-box',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+          position: 'relative',
+          overflow: 'hidden',
+          boxShadow: `0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05), ${glowShadow}`,
+        }}
+      >
+        {/* Top shimmer line */}
+        <div style={{
+          position: 'absolute', top: 0, left: '15%', right: '15%', height: '1px',
+          background: isRisk
+            ? 'linear-gradient(90deg, transparent, rgba(239,68,68,0.4), transparent)'
+            : 'linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)',
+          pointerEvents: 'none',
+        }}/>
+
+        {/* Header row */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {/* Name row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px', flexWrap: 'wrap' }}>
+              {/* Priority dot */}
+              <span style={{
+                width: '6px', height: '6px', borderRadius: '50%',
+                background: prioColor[proyecto.prioridad],
+                display: 'inline-block', flexShrink: 0,
+                boxShadow: `0 0 6px ${prioColor[proyecto.prioridad]}60`,
+              }}/>
+              {proyecto.color_emoji && <span style={{ fontSize: '12px' }}>{proyecto.color_emoji}</span>}
+              <h3 style={{
+                fontWeight: 700, color: '#fff', margin: 0,
+                fontSize: '13px', letterSpacing: '-0.01em',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {proyecto.nombre}
+              </h3>
             </div>
-            <p style={{ fontSize: '12px', color: '#A0AEC0', margin: 0 }}>{proyecto.cliente}</p>
+            {/* Subtitle */}
+            <p style={{ fontSize: '11px', color: '#64748b', margin: 0, fontWeight: 400 }}>
+              {proyecto.total_mensajes
+                ? `${proyecto.total_mensajes.toLocaleString('es')} mensajes`
+                : proyecto.cliente}
+            </p>
           </div>
-          <StatusBadge estado={proyecto.estado} />
+
+          {/* Badges */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
+            <StatusBadge estado={proyecto.estado} />
+            {hasAlerts && (
+              <span style={{
+                fontSize: '10px', padding: '2px 6px', borderRadius: '4px',
+                background: 'rgba(245,158,11,0.12)',
+                color: '#fbbf24',
+                border: '1px solid rgba(245,158,11,0.22)',
+                fontWeight: 600, letterSpacing: '0.02em',
+              }}>
+                ⚠ {proyecto.alertas_count}
+              </span>
+            )}
+          </div>
         </div>
-        {proyecto.mensajeReciente && (
-          <p style={{ fontSize: '13px', color: 'rgba(160,174,192,0.8)', fontStyle: 'italic', marginBottom: '16px' }}>
-            &ldquo;{proyecto.mensajeReciente}&rdquo;
+
+        {/* Last message preview */}
+        {proyecto.ultimo_mensaje && (
+          <p style={{
+            fontSize: '11px',
+            color: 'rgba(148,163,184,0.65)',
+            fontStyle: 'italic',
+            lineHeight: 1.5,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            margin: 0,
+          }}>
+            "{proyecto.ultimo_mensaje}"
           </p>
         )}
-        <div style={{ marginBottom: '12px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#A0AEC0', marginBottom: '4px' }}>
-            <span>Progreso</span><span>{proyecto.progreso}%</span>
-          </div>
-          <div style={{ height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '9999px', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${proyecto.progreso}%`, background: '#E8792F', borderRadius: '9999px' }} />
-          </div>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#A0AEC0' }}>
-          <span>{proyecto.responsable}</span><span>{proyecto.ultimaActividad}</span>
-        </div>
-        {proyecto.tags && proyecto.tags.length > 0 && (
-          <div style={{ display: 'flex', gap: '4px', marginTop: '12px' }}>
-            {proyecto.tags.map(tag => (
-              <span key={tag} style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '4px', background: 'rgba(232,121,47,0.1)', color: '#E8792F', border: '1px solid rgba(232,121,47,0.2)' }}>{tag}</span>
+
+        {/* Developer pills */}
+        {developers.length > 0 && (
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+            {developers.map((d: any) => (
+              <span key={d.id} title={d.nombre} style={{
+                fontSize: '10px', padding: '2px 7px', borderRadius: '4px',
+                background: `${d.color}12`, color: d.color,
+                border: `1px solid ${d.color}22`, fontWeight: 500, letterSpacing: '0.01em',
+              }}>
+                {d.emoji} {d.nombre.split(' ')[0]}
+              </span>
             ))}
           </div>
         )}
+
+        {/* Footer */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          fontSize: '10px', color: '#475569', marginTop: 'auto',
+          paddingTop: '8px',
+          borderTop: '1px solid rgba(255,255,255,0.04)',
+        }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ opacity: 0.6 }}>📱</span>
+            <span>WhatsApp</span>
+          </span>
+          <span style={{ color: '#64748b' }}>{timeAgo(proyecto.ultima_actividad)}</span>
+        </div>
       </div>
     </Link>
   )

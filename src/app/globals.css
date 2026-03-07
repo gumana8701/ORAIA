@@ -1,38 +1,184 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-* { box-sizing: border-box; }
-body { background-color: #0A0F1E; color: #FFFFFF; font-family: 'Inter', system-ui, sans-serif; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background-color: #0A0F1E;
+  color: #FFFFFF;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
 a { color: inherit; text-decoration: none; }
 
-@layer utilities {
-  .dot-bg {
-    background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
-    background-size: 24px 24px;
-  }
-  .glow-text {
-    background: linear-gradient(135deg, #fff 30%, #E8792F 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  .btn-orange {
-    background: #E8792F;
-    color: #fff;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    border-radius: 8px;
-    padding: 10px 24px;
-    box-shadow: 0 0 20px rgba(232,121,47,0.4);
-    transition: all 0.2s;
-    cursor: pointer;
-    border: none;
-  }
+/* ── Scrollbar ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(232,121,47,0.25); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(232,121,47,0.5); }
+
+/* ── Background system ─────────────────────────────────────── */
+.page-bg {
+  position: relative;
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 80% 50% at 100% 100%, rgba(232,121,47,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 0% 0%,    rgba(99,102,241,0.05) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 60% at 50% 110%,  rgba(232,121,47,0.04) 0%, transparent 50%),
+    #0A0F1E;
 }
 
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: #0A0F1E; }
-::-webkit-scrollbar-thumb { background: rgba(232,121,47,0.3); border-radius: 4px; }
+/* Dot grid overlay */
+.dot-bg {
+  background-image:
+    radial-gradient(ellipse 80% 50% at 100% 100%, rgba(232,121,47,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 0% 0%,    rgba(99,102,241,0.05) 0%, transparent 55%),
+    radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: auto, auto, 28px 28px;
+}
+
+/* Fine grid lines (alternative texture) */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px),
+    radial-gradient(ellipse 80% 50% at 100% 100%, rgba(232,121,47,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 0% 0%, rgba(99,102,241,0.05) 0%, transparent 55%);
+  background-size: 40px 40px, 40px 40px, auto, auto;
+}
+
+/* ── Glassmorphism cards ────────────────────────────────────── */
+.glass {
+  background: rgba(17, 24, 39, 0.70);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.glass-orange {
+  background: rgba(232,121,47,0.06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(232,121,47,0.2);
+  box-shadow: 0 4px 24px rgba(232,121,47,0.08), inset 0 1px 0 rgba(232,121,47,0.1);
+}
+.glass-danger {
+  background: rgba(239,68,68,0.06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(239,68,68,0.22);
+  box-shadow: 0 4px 24px rgba(239,68,68,0.08), inset 0 1px 0 rgba(239,68,68,0.08);
+}
+
+/* ── Orange glow effects ────────────────────────────────────── */
+.glow-orange {
+  box-shadow: 0 0 30px rgba(232,121,47,0.35), 0 0 60px rgba(232,121,47,0.12);
+}
+.glow-orange-sm {
+  box-shadow: 0 0 15px rgba(232,121,47,0.25);
+}
+.glow-text {
+  background: linear-gradient(135deg, #fff 40%, #E8792F 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Atmospheric halo — place as absolute child in relative container */
+.halo-orange {
+  position: absolute;
+  width: 320px; height: 320px;
+  background: radial-gradient(circle, rgba(232,121,47,0.12) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(40px);
+}
+.halo-blue {
+  position: absolute;
+  width: 250px; height: 250px;
+  background: radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(40px);
+}
+
+/* ── Typography ─────────────────────────────────────────────── */
+.headline {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+.headline-gradient {
+  background: linear-gradient(135deg, #fff 30%, #E8792F 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Status badges — compact ────────────────────────────────── */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 5px;
+  white-space: nowrap;
+}
+.status-activo    { background: rgba(34,197,94,0.12);  color: #4ade80; border: 1px solid rgba(34,197,94,0.25); }
+.status-en_riesgo { background: rgba(239,68,68,0.12);  color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
+.status-pausado   { background: rgba(107,114,128,0.15); color: #9ca3af; border: 1px solid rgba(107,114,128,0.3); }
+.status-completado{ background: rgba(59,130,246,0.12); color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); }
+
+/* ── CTA button ─────────────────────────────────────────────── */
+.btn-orange {
+  background: linear-gradient(135deg, #E8792F 0%, #d4651f 100%);
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: 11px;
+  border-radius: 8px;
+  padding: 9px 20px;
+  box-shadow: 0 0 20px rgba(232,121,47,0.35), 0 2px 8px rgba(0,0,0,0.3);
+  transition: all 0.2s;
+  cursor: pointer;
+  border: none;
+}
+.btn-orange:hover {
+  box-shadow: 0 0 32px rgba(232,121,47,0.55), 0 4px 12px rgba(0,0,0,0.4);
+  transform: translateY(-1px);
+}
+
+/* ── Stat cards ─────────────────────────────────────────────── */
+.stat-card {
+  background: rgba(17,24,39,0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 20px 24px;
+  position: relative;
+  overflow: hidden;
+}
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(232,121,47,0.3), transparent);
+}
+
+/* ── Project card hover ─────────────────────────────────────── */
+.project-card {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.project-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(232,121,47,0.15);
+}
