@@ -6,9 +6,13 @@ export interface Proyecto {
   cliente: string
   estado: EstadoProyecto
   prioridad: 'alta' | 'media' | 'baja'
-  ultimaActividad: string
+  ultimaActividad?: string
   mensajeReciente?: string
   responsable: string
   progreso: number
   tags?: string[]
+  whatsapp_chat_id?: string
+  slack_channel_id?: string
+  created_at?: string
+  updated_at?: string
 }
