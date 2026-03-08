@@ -9,10 +9,11 @@ async function getData() {
     process.env.NEXT_PUBLIC_SUPABASE_URL as string,
     process.env.SUPABASE_SERVICE_ROLE_KEY as string
   )
-  const [projRes, msgRes, pdRes] = await Promise.all([
+  const [projRes, msgRes, pdRes, devRes] = await Promise.all([
     supabase.from('projects').select('*').order('ultima_actividad', { ascending: false, nullsFirst: false }),
     supabase.from('messages').select('*', { count: 'exact', head: true }).gte('timestamp', new Date().toISOString().slice(0, 10)),
     supabase.from('project_developers').select('project_id, developer:developers(id,nombre,emoji,color,es_supervisor)'),
+    supabase.from('developers').select('*').eq('activo', true).order('nombre'),
   ])
 
   const devsByProject: Record<string, any[]> = {}
@@ -21,10 +22,17 @@ async function getData() {
     if (row.developer) devsByProject[row.project_id].push(row.developer)
   }
 
+  // Add "Sin asignar" sentinel for the picker
+  const allDevs = [
+    { id: null, nombre: 'Sin asignar', emoji: '➕', color: '#334155', activo: true },
+    ...(devRes.data ?? []),
+  ]
+
   return {
     proyectos: (projRes.data ?? []) as Proyecto[],
     mensajesHoy: msgRes.count ?? 0,
     devsByProject,
+    allDevs,
   }
 }
 
@@ -33,7 +41,7 @@ export default async function Dashboard({
 }: {
   searchParams: Promise<{ q?: string; status?: string; color?: string; dev?: string }>
 }) {
-  const { proyectos, mensajesHoy, devsByProject } = await getData()
+  const { proyectos, mensajesHoy, devsByProject, allDevs } = await getData()
   const { q = '', status = '', color = '', dev = '' } = await searchParams
 
   let filtered = proyectos
@@ -138,7 +146,7 @@ export default async function Dashboard({
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '14px' }}>
             {enRiesgoFiltered.map(p => (
-              <ProjectCard key={p.id} proyecto={p} developers={devsByProject[p.id] ?? []} />
+              <ProjectCard key={p.id} proyecto={p} developers={devsByProject[p.id] ?? []} allDevs={allDevs} />
             ))}
           </div>
         </div>
@@ -179,7 +187,7 @@ export default async function Dashboard({
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '14px' }}>
             {(status === 'en_riesgo' ? enRiesgoFiltered : restoFiltered).map(p => (
-              <ProjectCard key={p.id} proyecto={p} developers={devsByProject[p.id] ?? []} />
+              <ProjectCard key={p.id} proyecto={p} developers={devsByProject[p.id] ?? []} allDevs={allDevs} />
             ))}
           </div>
         )}

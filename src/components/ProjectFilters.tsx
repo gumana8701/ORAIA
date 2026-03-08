@@ -1,17 +1,17 @@
 'use client'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { useCallback } from 'react'
+import { useCallback, useRef, useState, useEffect } from 'react'
 
 const STATUSES = [
-  { value: '',           label: 'Todos',       icon: '◎',   color: '#A0AEC0' },
-  { value: 'activo',     label: 'Activo',      icon: '🟢',  color: '#22c55e' },
-  { value: 'en_riesgo',  label: 'En Riesgo',   icon: '🔴',  color: '#ef4444' },
-  { value: 'pausado',    label: 'Pausado',     icon: '⏸',   color: '#6b7280' },
-  { value: 'completado', label: 'Completado',  icon: '✅',  color: '#3b82f6' },
+  { value: '',           label: 'Todos los estados', icon: '◎' },
+  { value: 'activo',     label: '🟢 Activo',          color: '#22c55e' },
+  { value: 'en_riesgo',  label: '🔴 En Riesgo',       color: '#ef4444' },
+  { value: 'pausado',    label: '⏸ Pausado',           color: '#6b7280' },
+  { value: 'completado', label: '✅ Completado',       color: '#3b82f6' },
 ]
 
 const STAGES = [
-  { value: '',   label: 'Todas etapas', color: '#A0AEC0' },
+  { value: '',   label: 'Todas las etapas' },
   { value: '🟢', label: '🟢 Producción',  color: '#22c55e' },
   { value: '🟡', label: '🟡 Desarrollo',  color: '#eab308' },
   { value: '🔴', label: '🔴 En riesgo',   color: '#ef4444' },
@@ -19,11 +19,89 @@ const STAGES = [
 ]
 
 const DEVELOPERS = [
-  { name: 'Enzo ORA IA',    emoji: '🟠', color: '#E8792F', shortName: 'Enzo' },
-  { name: 'Hector Ramirez', emoji: '🔵', color: '#3b82f6', shortName: 'Héctor' },
-  { name: 'Luca Fonzo',     emoji: '🟢', color: '#22c55e', shortName: 'Luca' },
-  { name: 'Kevin ORA IA',   emoji: '🟣', color: '#a855f7', shortName: 'Kevin' },
+  { name: '',               label: 'Todos los devs',  emoji: '👥', color: '#A0AEC0' },
+  { name: 'Enzo ORA IA',   label: '🟠 Enzo',          emoji: '🟠', color: '#E8792F' },
+  { name: 'Hector Ramirez',label: '🔵 Héctor',        emoji: '🔵', color: '#3b82f6' },
+  { name: 'Luca Fonzo',    label: '🟢 Luca',           emoji: '🟢', color: '#22c55e' },
+  { name: 'Kevin ORA IA',  label: '🟣 Kevin',          emoji: '🟣', color: '#a855f7' },
 ]
+
+function Dropdown({
+  value, options, onChange, placeholder
+}: {
+  value: string
+  options: { value: string; label: string; color?: string }[]
+  onChange: (v: string) => void
+  placeholder: string
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const selected = options.find(o => o.value === value)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  return (
+    <div ref={ref} style={{ position: 'relative', minWidth: '170px' }}>
+      {/* Trigger */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: '8px', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer',
+          background: value ? 'rgba(232,121,47,0.08)' : 'rgba(17,24,39,0.8)',
+          border: `1px solid ${value ? 'rgba(232,121,47,0.25)' : 'rgba(255,255,255,0.08)'}`,
+          color: value ? (selected?.color ?? '#E8792F') : '#64748b',
+          fontSize: '12px', fontWeight: value ? 600 : 400,
+          transition: 'all 0.15s',
+        }}
+      >
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {selected ? selected.label : placeholder}
+        </span>
+        <span style={{ fontSize: '9px', opacity: 0.5, flexShrink: 0, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>▼</span>
+      </button>
+
+      {/* Dropdown panel */}
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 100,
+          background: 'rgba(10,15,30,0.98)',
+          backdropFilter: 'blur(16px)',
+          border: '1px solid rgba(255,255,255,0.10)',
+          borderRadius: '10px', overflow: 'hidden',
+          minWidth: '100%', width: 'max-content',
+          boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+        }}>
+          {options.map((opt, i) => (
+            <button
+              key={opt.value + i}
+              onClick={() => { onChange(opt.value); setOpen(false) }}
+              style={{
+                display: 'block', width: '100%', textAlign: 'left',
+                padding: '9px 14px', fontSize: '12px', cursor: 'pointer', border: 'none',
+                background: value === opt.value ? 'rgba(232,121,47,0.12)' : 'transparent',
+                color: value === opt.value ? (opt.color ?? '#E8792F') : (opt.value ? '#cbd5e1' : '#475569'),
+                fontWeight: value === opt.value ? 600 : 400,
+                borderBottom: i < options.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                transition: 'background 0.1s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+              onMouseLeave={e => (e.currentTarget.style.background = value === opt.value ? 'rgba(232,121,47,0.12)' : 'transparent')}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function ProjectFilters({ devsByProject = {} }: { devsByProject?: Record<string, any[]> }) {
   const router   = useRouter()
@@ -43,177 +121,65 @@ export default function ProjectFilters({ devsByProject = {} }: { devsByProject?:
   const dev    = params.get('dev') ?? ''
   const hasFilters = !!(q || status || color || dev)
 
-  const btnBase: React.CSSProperties = {
-    padding: '6px 13px', borderRadius: '7px', fontSize: '12px',
-    fontWeight: 500, cursor: 'pointer', border: '1px solid',
-    transition: 'all 0.15s', background: 'transparent', whiteSpace: 'nowrap',
-  }
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '28px' }}>
-
-      {/* ── Row 1: Search + Clear ─────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-        <div style={{ position: 'relative', flex: 1, maxWidth: '380px' }}>
-          <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#4a5568', fontSize: '13px', pointerEvents: 'none' }}>🔍</span>
-          <input
-            type="text"
-            placeholder="Buscar proyecto..."
-            defaultValue={q}
-            onChange={e => update('q', e.target.value)}
-            style={{
-              width: '100%', boxSizing: 'border-box',
-              background: 'rgba(17,24,39,0.80)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: '8px', padding: '9px 14px 9px 36px',
-              color: '#fff', fontSize: '13px', outline: 'none',
-            }}
-          />
-        </div>
-        {hasFilters && (
-          <button
-            onClick={() => router.replace(pathname)}
-            style={{ ...btnBase, borderColor: 'rgba(255,255,255,0.08)', color: '#475569', fontSize: '11px', padding: '7px 12px' }}
-          >
-            ✕ Limpiar filtros
-          </button>
-        )}
+    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '28px' }}>
+      {/* Search */}
+      <div style={{ position: 'relative', flex: '1', minWidth: '200px', maxWidth: '300px' }}>
+        <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#334155', fontSize: '12px', pointerEvents: 'none' }}>🔍</span>
+        <input
+          type="text"
+          placeholder="Buscar proyecto..."
+          defaultValue={q}
+          onChange={e => update('q', e.target.value)}
+          style={{
+            width: '100%', boxSizing: 'border-box',
+            background: 'rgba(17,24,39,0.80)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '8px', padding: '8px 12px 8px 32px',
+            color: '#fff', fontSize: '12px', outline: 'none',
+          }}
+        />
       </div>
 
-      {/* ── Row 2: Estado + Etapa unificado ──────────────────────────── */}
-      <div style={{
-        background: 'rgba(17,24,39,0.65)',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255,255,255,0.07)',
-        borderRadius: '12px',
-        padding: '14px 16px',
-      }}>
-        {/* Section label */}
-        <p style={{ fontSize: '10px', color: '#334155', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 10px' }}>
-          Estado &amp; Etapa
-        </p>
+      {/* Estado dropdown */}
+      <Dropdown
+        value={status}
+        options={STATUSES.map(s => ({ value: s.value, label: s.label, color: (s as any).color }))}
+        onChange={v => update('status', v)}
+        placeholder="Estado"
+      />
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-start' }}>
-          {/* Status buttons */}
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-            {STATUSES.map(s => {
-              const active = status === s.value && !color
-              return (
-                <button
-                  key={s.value}
-                  onClick={() => { update('status', s.value); update('color', '') }}
-                  style={{
-                    ...btnBase,
-                    borderColor: active ? s.color : 'rgba(255,255,255,0.07)',
-                    background: active ? `${s.color}15` : 'rgba(255,255,255,0.03)',
-                    color: active ? s.color : '#64748b',
-                    fontWeight: active ? 700 : 400,
-                    display: 'flex', alignItems: 'center', gap: '5px',
-                  }}
-                >
-                  <span style={{ fontSize: '11px' }}>{s.icon}</span>
-                  {s.label}
-                </button>
-              )
-            })}
-          </div>
+      {/* Etapa dropdown */}
+      <Dropdown
+        value={color}
+        options={STAGES.map(s => ({ value: s.value, label: s.label, color: (s as any).color }))}
+        onChange={v => update('color', v)}
+        placeholder="Etapa"
+      />
 
-          {/* Divider */}
-          <div style={{ width: '1px', background: 'rgba(255,255,255,0.06)', alignSelf: 'stretch', margin: '0 2px' }}/>
+      {/* Desarrollador dropdown */}
+      <Dropdown
+        value={dev}
+        options={DEVELOPERS.map(d => ({ value: d.name, label: d.label, color: d.color }))}
+        onChange={v => update('dev', v)}
+        placeholder="Desarrollador"
+      />
 
-          {/* Stage / color buttons */}
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-            {STAGES.map(s => {
-              const active = color === s.value && !status
-              return (
-                <button
-                  key={s.value}
-                  onClick={() => { update('color', s.value); update('status', '') }}
-                  style={{
-                    ...btnBase,
-                    borderColor: active ? s.color : 'rgba(255,255,255,0.07)',
-                    background: active ? `${s.color}15` : 'rgba(255,255,255,0.03)',
-                    color: active ? s.color : '#64748b',
-                    fontWeight: active ? 700 : 400,
-                  }}
-                >
-                  {s.label}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Row 3: Desarrolladores ────────────────────────────────────── */}
-      <div style={{
-        background: 'rgba(17,24,39,0.65)',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255,255,255,0.07)',
-        borderRadius: '12px',
-        padding: '14px 16px',
-      }}>
-        <p style={{ fontSize: '10px', color: '#334155', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 10px' }}>
-          Desarrollador
-        </p>
-
-        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
-          {/* All developers button */}
-          <button
-            onClick={() => update('dev', '')}
-            style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px',
-              padding: '10px 16px', borderRadius: '10px', cursor: 'pointer',
-              border: `1px solid ${dev === '' ? 'rgba(232,121,47,0.4)' : 'rgba(255,255,255,0.07)'}`,
-              background: dev === '' ? 'rgba(232,121,47,0.12)' : 'rgba(255,255,255,0.02)',
-              transition: 'all 0.15s', minWidth: '70px',
-            }}
-          >
-            <span style={{ fontSize: '20px', lineHeight: 1 }}>👥</span>
-            <span style={{
-              fontSize: '11px', fontWeight: dev === '' ? 700 : 400,
-              color: dev === '' ? '#E8792F' : '#4a5568',
-              letterSpacing: '0.01em',
-            }}>Todos</span>
-          </button>
-
-          {DEVELOPERS.map(d => {
-            const active = dev === d.name
-            return (
-              <button
-                key={d.name}
-                onClick={() => update('dev', d.name)}
-                style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px',
-                  padding: '10px 16px', borderRadius: '10px', cursor: 'pointer',
-                  border: `1px solid ${active ? d.color + '50' : 'rgba(255,255,255,0.07)'}`,
-                  background: active ? `${d.color}12` : 'rgba(255,255,255,0.02)',
-                  transition: 'all 0.15s', minWidth: '70px',
-                  boxShadow: active ? `0 0 12px ${d.color}20` : 'none',
-                }}
-              >
-                {/* Avatar circle */}
-                <div style={{
-                  width: '32px', height: '32px', borderRadius: '50%',
-                  background: active ? `${d.color}20` : 'rgba(255,255,255,0.05)',
-                  border: `1.5px solid ${active ? d.color + '60' : 'rgba(255,255,255,0.08)'}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '16px', lineHeight: 1,
-                  boxShadow: active ? `0 0 8px ${d.color}40` : 'none',
-                }}>
-                  {d.emoji}
-                </div>
-                <span style={{
-                  fontSize: '11px', fontWeight: active ? 700 : 400,
-                  color: active ? d.color : '#4a5568',
-                  letterSpacing: '0.01em',
-                }}>{d.shortName}</span>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
+      {/* Clear */}
+      {hasFilters && (
+        <button
+          onClick={() => router.replace(pathname)}
+          style={{
+            padding: '8px 12px', borderRadius: '8px', fontSize: '11px', cursor: 'pointer',
+            border: '1px solid rgba(255,255,255,0.06)', background: 'transparent', color: '#334155',
+            transition: 'color 0.15s',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#94a3b8')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#334155')}
+        >
+          ✕ Limpiar
+        </button>
+      )}
     </div>
   )
 }
