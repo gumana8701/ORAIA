@@ -16,11 +16,23 @@ function timeAgo(iso?: string): string {
   const mins  = Math.floor(diff / 60000)
   const hours = Math.floor(mins / 60)
   const days  = Math.floor(hours / 24)
-  if (days > 30) return new Date(iso).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })
+  if (days > 30) return `hace ${days}d`
   if (days > 0)  return `hace ${days}d`
   if (hours > 0) return `hace ${hours}h`
   if (mins > 0)  return `hace ${mins}m`
   return 'ahora'
+}
+
+function fmtDate(iso?: string): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  const today    = new Date(); today.setHours(0,0,0,0)
+  const yesterday = new Date(today); yesterday.setDate(today.getDate()-1)
+  const msgDay = new Date(d); msgDay.setHours(0,0,0,0)
+  const time = d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', timeZone: 'America/El_Salvador' })
+  if (msgDay.getTime() === today.getTime())    return `hoy ${time}`
+  if (msgDay.getTime() === yesterday.getTime()) return `ayer ${time}`
+  return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/El_Salvador' }) + ' ' + time
 }
 
 export default function ProjectCard({ proyecto, developers = [] }: { proyecto: Proyecto; developers?: any[] }) {
@@ -151,16 +163,25 @@ export default function ProjectCard({ proyecto, developers = [] }: { proyecto: P
 
         {/* Footer */}
         <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          fontSize: '10px', color: '#475569', marginTop: 'auto',
-          paddingTop: '8px',
+          marginTop: 'auto', paddingTop: '8px',
           borderTop: '1px solid rgba(255,255,255,0.04)',
         }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ opacity: 0.6 }}>📱</span>
-            <span>WhatsApp</span>
-          </span>
-          <span style={{ color: '#64748b' }}>{timeAgo(proyecto.ultima_actividad)}</span>
+          {/* Date line */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
+            <span style={{ fontSize: '10px', color: '#334155', display: 'flex', alignItems: 'center', gap: '3px' }}>
+              <span>🕐</span> Último mensaje
+            </span>
+            <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 500 }}>
+              {timeAgo(proyecto.ultima_actividad)}
+            </span>
+          </div>
+          <div style={{
+            fontSize: '11px', color: '#475569', fontWeight: 500,
+            background: 'rgba(255,255,255,0.03)', borderRadius: '5px',
+            padding: '4px 7px', textAlign: 'right',
+          }}>
+            📅 {fmtDate(proyecto.ultima_actividad)}
+          </div>
         </div>
       </div>
     </Link>
