@@ -6,6 +6,13 @@ const AGENT_ID = 'agent_3701kk4s3g38f2rspd33affqa1b4'
 
 type ConvStatus = 'idle' | 'connecting' | 'connected' | 'error'
 
+interface TranscriptEntry {
+  id: number
+  source: 'user' | 'ai'
+  text: string
+  ts: Date
+}
+
 interface ProjectContext {
   resumen: {
     total: number
@@ -46,23 +53,45 @@ function formatContext(ctx: ProjectContext): string {
   return lines.join('\n')
 }
 
+let transcriptIdCounter = 0
+
 export default function VoiceWidget() {
-  const [open, setOpen] = useState(false)
-  const [status, setStatus] = useState<ConvStatus>('idle')
-  const [context, setContext] = useState<ProjectContext | null>(null)
+  const [open, setOpen]               = useState(false)
+  const [status, setStatus]           = useState<ConvStatus>('idle')
+  const [context, setContext]         = useState<ProjectContext | null>(null)
   const [contextLoading, setContextLoading] = useState(false)
-  const [isMuted, setIsMuted] = useState(false)
+  const [isMuted, setIsMuted]         = useState(false)
   const [agentTalking, setAgentTalking] = useState(false)
+  const [transcript, setTranscript]   = useState<TranscriptEntry[]>([])
+  const transcriptEndRef              = useRef<HTMLDivElement>(null)
+
+  const addEntry = useCallback((source: 'user' | 'ai', text: string) => {
+    if (!text?.trim()) return
+    setTranscript(prev => [...prev, {
+      id: ++transcriptIdCounter,
+      source,
+      text: text.trim(),
+      ts: new Date(),
+    }])
+  }, [])
 
   const conversation = useConversation({
-    onConnect: () => setStatus('connected'),
+    onConnect:    () => setStatus('connected'),
     onDisconnect: () => { setStatus('idle'); setAgentTalking(false) },
-    onError: (err: any) => { console.error('Voice error:', err); setStatus('error') },
-    onMessage: (msg: any) => {
-      if (msg?.source === 'ai') setAgentTalking(true)
-      else setAgentTalking(false)
+    onError:      (err: any) => { console.error('Voice error:', err); setStatus('error') },
+    onMessage:    (msg: any) => {
+      const source: 'user' | 'ai' = msg?.source === 'ai' ? 'ai' : 'user'
+      setAgentTalking(source === 'ai')
+      // ElevenLabs sends message text in msg.message or msg.text
+      const text = msg?.message ?? msg?.text ?? ''
+      if (text) addEntry(source, text)
     },
   })
+
+  // Auto-scroll transcript to bottom
+  useEffect(() => {
+    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [transcript])
 
   // Fetch project context when widget opens
   useEffect(() => {
@@ -78,14 +107,13 @@ export default function VoiceWidget() {
   const startConversation = useCallback(async () => {
     if (!context) return
     setStatus('connecting')
+    setTranscript([]) // clear transcript on new session
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true })
       await conversation.startSession({
         agentId: AGENT_ID,
         connectionType: 'webrtc' as const,
-        dynamicVariables: {
-          project_context: formatContext(context),
-        },
+        dynamicVariables: { project_context: formatContext(context) },
       })
     } catch (err) {
       console.error('Failed to start:', err)
@@ -99,24 +127,19 @@ export default function VoiceWidget() {
   }, [conversation])
 
   const toggleMute = useCallback(() => {
-    if (isMuted) {
-      conversation.setVolume({ volume: 1 })
-    } else {
-      conversation.setVolume({ volume: 0 })
-    }
+    conversation.setVolume({ volume: isMuted ? 1 : 0 })
     setIsMuted(m => !m)
   }, [conversation, isMuted])
 
-  const isConnected = status === 'connected'
+  const isConnected  = status === 'connected'
   const isConnecting = status === 'connecting'
 
-  // Pulsing animation for active orb
   return (
     <>
-      {/* Floating button — ARIA avatar */}
+      {/* ── Floating avatar button ──────────────────────────────────────── */}
       <button
         onClick={() => setOpen(o => !o)}
-        title="ARIA — Asistente de voz"
+        title="BOB — Asistente de voz"
         style={{
           position: 'fixed', bottom: '28px', right: '28px', zIndex: 1000,
           width: '64px', height: '64px', borderRadius: '50%',
@@ -133,7 +156,7 @@ export default function VoiceWidget() {
       >
         <img
           src="/aria-avatar.png"
-          alt="ARIA"
+          alt="BOB"
           style={{
             width: '100%', height: '100%',
             objectFit: 'cover', borderRadius: '50%',
@@ -141,7 +164,6 @@ export default function VoiceWidget() {
             display: 'block',
           }}
         />
-        {/* Recording indicator dot */}
         {isConnected && (
           <span style={{
             position: 'absolute', bottom: '2px', right: '2px',
@@ -153,41 +175,47 @@ export default function VoiceWidget() {
         )}
       </button>
 
-      {/* Widget panel */}
+      {/* ── Widget panel ────────────────────────────────────────────────── */}
       {open && (
         <div style={{
           position: 'fixed', bottom: '96px', right: '28px', zIndex: 1000,
-          width: '320px',
-          background: 'rgba(13,18,32,0.96)',
+          width: '340px',
+          background: 'rgba(13,18,32,0.97)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
           border: '1px solid rgba(232,121,47,0.2)',
           borderRadius: '16px',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04) inset',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.04)',
           overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          maxHeight: '540px',
         }}>
+
           {/* Header */}
           <div style={{
-            padding: '16px 18px 14px',
+            padding: '14px 16px',
             background: 'linear-gradient(135deg, rgba(232,121,47,0.12), rgba(13,18,32,0))',
             borderBottom: '1px solid rgba(255,255,255,0.06)',
             display: 'flex', alignItems: 'center', gap: '10px',
+            flexShrink: 0,
           }}>
-            {/* Avatar mini */}
             <div style={{
-              width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
+              width: '38px', height: '38px', borderRadius: '50%', flexShrink: 0,
               border: `1.5px solid ${isConnected ? 'rgba(232,121,47,0.6)' : 'rgba(232,121,47,0.2)'}`,
               boxShadow: isConnected ? '0 0 12px rgba(232,121,47,0.35)' : 'none',
-              overflow: 'hidden', position: 'relative',
+              overflow: 'hidden',
               animation: isConnected && agentTalking ? 'avatarPulse 1s ease-in-out infinite' : 'none',
             }}>
-              <img src="/aria-avatar.png" alt="ARIA" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              <img src="/aria-avatar.png" alt="BOB" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
             </div>
             <div style={{ flex: 1 }}>
-              <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#fff' }}>ARIA</p>
+              <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#fff' }}>BOB</p>
               <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>
-                {isConnected ? (agentTalking ? '🗣 Hablando...' : '🎧 Escuchando') :
-                 isConnecting ? '⏳ Conectando...' : 'Asistente de Proyectos ORA IA'}
+                {isConnected
+                  ? (agentTalking ? '🗣 Hablando...' : '🎧 Escuchando')
+                  : isConnecting ? '⏳ Conectando...'
+                  : 'Asistente de Proyectos ORA IA'}
               </p>
             </div>
             <button onClick={() => setOpen(false)} style={{
@@ -196,16 +224,84 @@ export default function VoiceWidget() {
             }}>✕</button>
           </div>
 
-          {/* Body */}
-          <div style={{ padding: '18px' }}>
+          {/* ── Live Transcript ──────────────────────────────────────────── */}
+          {(isConnected || transcript.length > 0) && (
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '12px 14px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              minHeight: '120px',
+              maxHeight: '260px',
+              borderBottom: '1px solid rgba(255,255,255,0.05)',
+            }}>
+              {/* Label */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                marginBottom: '2px',
+              }}>
+                <div style={{
+                  width: '6px', height: '6px', borderRadius: '50%',
+                  background: isConnected ? '#22c55e' : '#475569',
+                  boxShadow: isConnected ? '0 0 6px rgba(34,197,94,0.7)' : 'none',
+                  animation: isConnected ? 'livePulse 1.5s ease-in-out infinite' : 'none',
+                }}/>
+                <span style={{ fontSize: '9px', color: '#475569', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  {isConnected ? 'En vivo' : 'Transcripción'}
+                </span>
+              </div>
+
+              {transcript.length === 0 && isConnected && (
+                <p style={{ fontSize: '11px', color: '#334155', fontStyle: 'italic', margin: 0, paddingLeft: '4px' }}>
+                  Comienza a hablar…
+                </p>
+              )}
+
+              {transcript.map(entry => (
+                <div
+                  key={entry.id}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: entry.source === 'user' ? 'flex-end' : 'flex-start',
+                    gap: '2px',
+                  }}
+                >
+                  <div style={{
+                    maxWidth: '85%',
+                    padding: '7px 10px',
+                    borderRadius: entry.source === 'user' ? '10px 10px 2px 10px' : '10px 10px 10px 2px',
+                    background: entry.source === 'user'
+                      ? 'rgba(232,121,47,0.15)'
+                      : 'rgba(255,255,255,0.06)',
+                    border: `1px solid ${entry.source === 'user' ? 'rgba(232,121,47,0.25)' : 'rgba(255,255,255,0.08)'}`,
+                    fontSize: '12px',
+                    color: entry.source === 'user' ? '#fed7aa' : '#cbd5e1',
+                    lineHeight: 1.5,
+                  }}>
+                    {entry.text}
+                  </div>
+                  <span style={{ fontSize: '9px', color: '#334155' }}>
+                    {entry.source === 'user' ? 'Tú' : 'BOB'} · {entry.ts.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </span>
+                </div>
+              ))}
+              <div ref={transcriptEndRef} />
+            </div>
+          )}
+
+          {/* ── Controls ────────────────────────────────────────────────── */}
+          <div style={{ padding: '14px 16px', flexShrink: 0 }}>
             {/* Context status */}
             <div style={{
-              padding: '10px 12px', borderRadius: '8px',
+              padding: '8px 11px', borderRadius: '7px',
               background: contextLoading
                 ? 'rgba(245,158,11,0.06)'
                 : context ? 'rgba(34,197,94,0.06)' : 'rgba(239,68,68,0.06)',
               border: `1px solid ${contextLoading ? 'rgba(245,158,11,0.2)' : context ? 'rgba(34,197,94,0.18)' : 'rgba(239,68,68,0.2)'}`,
-              marginBottom: '14px', fontSize: '11px',
+              marginBottom: '12px', fontSize: '11px',
             }}>
               {contextLoading ? (
                 <span style={{ color: '#fbbf24' }}>⏳ Cargando datos de proyectos...</span>
@@ -218,13 +314,13 @@ export default function VoiceWidget() {
               )}
             </div>
 
-            {/* Main action */}
+            {/* Action buttons */}
             {!isConnected ? (
               <button
                 onClick={startConversation}
                 disabled={!context || isConnecting}
                 style={{
-                  width: '100%', padding: '13px',
+                  width: '100%', padding: '12px',
                   borderRadius: '10px', fontSize: '13px',
                   fontWeight: 700, cursor: (!context || isConnecting) ? 'not-allowed' : 'pointer',
                   border: '1px solid rgba(232,121,47,0.3)',
@@ -244,7 +340,7 @@ export default function VoiceWidget() {
                 <button
                   onClick={toggleMute}
                   style={{
-                    flex: 1, padding: '11px',
+                    flex: 1, padding: '10px',
                     borderRadius: '8px', fontSize: '12px',
                     fontWeight: 600, cursor: 'pointer',
                     border: '1px solid rgba(255,255,255,0.08)',
@@ -257,7 +353,7 @@ export default function VoiceWidget() {
                 <button
                   onClick={stopConversation}
                   style={{
-                    flex: 1, padding: '11px',
+                    flex: 1, padding: '10px',
                     borderRadius: '8px', fontSize: '12px',
                     fontWeight: 600, cursor: 'pointer',
                     border: '1px solid rgba(239,68,68,0.25)',
@@ -276,8 +372,7 @@ export default function VoiceWidget() {
               </p>
             )}
 
-            {/* Footer tip */}
-            <p style={{ fontSize: '10px', color: '#334155', textAlign: 'center', marginTop: '12px', lineHeight: 1.5 }}>
+            <p style={{ fontSize: '10px', color: '#334155', textAlign: 'center', marginTop: '10px', lineHeight: 1.5 }}>
               Pregunta sobre proyectos, alertas o estado del equipo.
             </p>
           </div>
@@ -288,6 +383,10 @@ export default function VoiceWidget() {
         @keyframes avatarPulse {
           0%, 100% { box-shadow: 0 0 16px rgba(232,121,47,0.4); }
           50%       { box-shadow: 0 0 36px rgba(232,121,47,0.75), 0 0 60px rgba(232,121,47,0.2); }
+        }
+        @keyframes livePulse {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0.4; }
         }
       `}</style>
     </>
