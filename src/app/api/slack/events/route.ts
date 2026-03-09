@@ -8,14 +8,13 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
 
 const SLACK_SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET || ''
+const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || ''
 const sb = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 // ── Verify Slack signature ────────────────────────────────────────────────────
 async function verifySlack(req: NextRequest, body: string): Promise<boolean> {
@@ -67,17 +66,27 @@ async function classifyMessage(text: string, channelName: string, contextMsgs: s
     `${i+1}. "${p.nombre}" (cliente: ${p.cliente || 'interno'})`).join('\n')
   const context = contextMsgs.join('\n') || '(sin contexto previo)'
 
-  const response = await anthropic.messages.create({
-    model: 'claude-haiku-4-5',
-    max_tokens: 150,
-    messages: [{
-      role: 'user',
-      content: `Canal: #${channelName}\nContexto:\n${context}\n\nMensaje: "${text}"\n\nProyectos:\n${projectList}\n\nResponde SOLO JSON: {"project_index": <n o null>, "confidence": <0.0-1.0>}`
-    }]
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': ANTHROPIC_KEY,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5',
+      max_tokens: 150,
+      messages: [{
+        role: 'user',
+        content: `Canal: #${channelName}\nContexto:\n${context}\n\nMensaje: "${text}"\n\nProyectos:\n${projectList}\n\nResponde SOLO JSON: {"project_index": <n o null>, "confidence": <0.0-1.0>}`
+      }]
+    }),
   })
+  const data = await res.json()
 
   try {
-    const json = JSON.parse((response.content[0] as { text: string }).text.match(/\{[\s\S]*\}/)?.[0] || '{}')
+    const txt  = (data.content?.[0]?.text || '{}') as string
+    const json = JSON.parse(txt.match(/\{[\s\S]*\}/)?.[0] || '{}')
     return {
       projectId: json.project_index ? projects[json.project_index - 1]?.id || null : null,
       confidence: json.confidence || 0,
