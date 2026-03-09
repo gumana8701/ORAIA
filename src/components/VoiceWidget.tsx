@@ -29,25 +29,29 @@ interface ProjectContext {
 
 function formatContext(ctx: ProjectContext): string {
   const { resumen, proyectos_en_riesgo, proyectos_activos, alertas_urgentes } = ctx
+  const fuentes = (resumen as any).fuentes_activas?.join(', ') ?? 'WhatsApp, Slack'
   const lines: string[] = [
-    `RESUMEN: ${resumen.total} proyectos total — ${resumen.activos} activos, ${resumen.en_riesgo} en riesgo, ${resumen.pausados} pausados, ${resumen.completados} completados. ${resumen.alertas_abiertas} alertas abiertas.`,
+    `RESUMEN GENERAL: ${resumen.total} proyectos — ${resumen.activos} activos, ${resumen.en_riesgo} en riesgo, ${resumen.pausados} pausados. ${resumen.alertas_abiertas} alertas abiertas. ${(resumen as any).msgs_72h ?? 0} mensajes en las últimas 72h. Fuentes de datos: ${fuentes}.`,
   ]
   if (proyectos_en_riesgo.length > 0) {
-    lines.push(`\nPROYECTOS EN RIESGO (${proyectos_en_riesgo.length}):`)
-    for (const p of proyectos_en_riesgo) {
-      lines.push(`  - ${p.nombre}: ${p.alertas} alerta(s), último mensaje ${p.ultimo_mensaje ?? 'desconocido'}, dev: ${p.desarrollador}`)
+    lines.push(`\nPROYECTOS EN RIESGO — ATENCIÓN INMEDIATA:`)
+    for (const p of proyectos_en_riesgo as any[]) {
+      lines.push(`  • ${p.nombre}${p.cliente ? ` (cliente: ${p.cliente})` : ''}: ${p.alertas} alerta(s), actividad 72h: ${p.actividad ?? p.actividad72h ?? '—'}, última act: ${p.ultimo_mensaje ?? '—'}, responsable: ${p.desarrollador}`)
+      if (p.alerts_detail?.length) {
+        for (const d of p.alerts_detail) lines.push(`    ↳ ${d}`)
+      }
     }
   }
   if (proyectos_activos.length > 0) {
-    lines.push(`\nPROYECTOS ACTIVOS (muestra):`)
-    for (const p of proyectos_activos.slice(0, 8)) {
-      lines.push(`  - ${p.nombre}: ${p.mensajes} mensajes, último ${p.ultimo_mensaje ?? '—'}, dev: ${p.desarrollador}`)
+    lines.push(`\nPROYECTOS ACTIVOS:`)
+    for (const p of proyectos_activos.slice(0, 10) as any[]) {
+      lines.push(`  • ${p.nombre}${p.cliente ? ` (${p.cliente})` : ''}: progreso ${p.progreso ?? 0}%, actividad 72h: ${p.actividad ?? p.actividad72h ?? '—'}, responsable: ${p.desarrollador}`)
     }
   }
   if (alertas_urgentes.length > 0) {
-    lines.push(`\nALERTAS CRÍTICAS/ALTAS:`)
-    for (const a of alertas_urgentes.slice(0, 5)) {
-      lines.push(`  - [${a.nivel.toUpperCase()}] ${a.tipo}: ${a.descripcion}`)
+    lines.push(`\nALERTAS URGENTES:`)
+    for (const a of alertas_urgentes.slice(0, 6)) {
+      lines.push(`  • [${a.nivel.toUpperCase()}] ${a.tipo}: ${a.descripcion}`)
     }
   }
   return lines.join('\n')
