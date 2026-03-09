@@ -1,0 +1,11 @@
+{
+  "name": "oraia-slack-sync",
+  "version": "1.0.0",
+  "description": "Slack history sync → Supabase for ORAIA",
+  "main": "sync.js",
+  "scripts": {
+    "sync": "node sync.js",
+    "watch": "node watch.js"
+  },
+  "engines": { "node": ">=18" }
+}
