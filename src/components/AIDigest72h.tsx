@@ -1,234 +1,251 @@
-// AIDigest72h.tsx — Server Component
-// Renders an AI-style digest of the last 72 hours.
-// Returns null if no messages/alerts were found in that window.
+'use client'
 
-import { createClient } from '@supabase/supabase-js'
+import { useEffect, useState, useTransition, useCallback } from 'react'
 
-function sb() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface ProjectDigest {
+  id: string
+  nombre: string
+  estado: string
+  msgs: number
+  ultimoMensaje: string
+  ultimoTimestamp: string
+  alertas: number
+  senders: string[]
 }
 
-// El Salvador = UTC-6
-function toSV(iso: string) {
-  const d = new Date(iso)
-  return new Date(d.getTime() - 6 * 60 * 60 * 1000)
-}
-
-function relativeLabel(iso: string): string {
-  const nowSV  = new Date(Date.now() - 6 * 60 * 60 * 1000)
-  const thenSV = toSV(iso)
-  const diffH  = (nowSV.getTime() - thenSV.getTime()) / 3600000
-  if (diffH < 1)  return 'hace menos de 1 hora'
-  if (diffH < 24) return `hace ~${Math.round(diffH)}h`
-  return `hace ~${Math.round(diffH / 24)}d`
-}
-
-// ─── Build a human-readable digest without an LLM ────────────────────────────
-function buildDigest(data: {
-  proyectosActivos: { nombre: string; msgs: number; ultimoMsg: string; ultimoTimestamp: string; enRiesgo: boolean }[]
-  alertasNuevas: { tipo: string; nivel: string; descripcion: string; proyecto: string }[]
+interface DigestPayload {
+  proyectos: ProjectDigest[]
   totalMsgs: number
-  ventanaHoras: number
-}): string {
-  const { proyectosActivos, alertasNuevas, totalMsgs } = data
+  generatedAt: string
+}
 
-  const lines: string[] = []
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function relLabel(iso: string): string {
+  const diffH = (Date.now() - new Date(iso).getTime()) / 3_600_000
+  if (diffH < 1)  return 'hace <1h'
+  if (diffH < 24) return `hace ${Math.round(diffH)}h`
+  return `hace ${Math.round(diffH / 24)}d`
+}
 
-  // Opening line
-  if (totalMsgs === 0 && alertasNuevas.length === 0) return ''
+function estadoColor(estado: string) {
+  if (estado === 'en_riesgo') return { dot: '#ef4444', text: '#f87171', badge: 'rgba(239,68,68,0.12)' }
+  if (estado === 'activo')    return { dot: '#E8792F', text: '#fb923c', badge: 'rgba(232,121,47,0.10)' }
+  if (estado === 'pausado')   return { dot: '#94a3b8', text: '#94a3b8', badge: 'rgba(148,163,184,0.10)' }
+  return { dot: '#22c55e', text: '#4ade80', badge: 'rgba(34,197,94,0.10)' }
+}
 
-  lines.push(
-    `En las últimas 72 horas hubo **${totalMsgs} mensaje${totalMsgs !== 1 ? 's'  : ''}** en **${proyectosActivos.length} proyecto${proyectosActivos.length !== 1 ? 's' : ''}**.`
-  )
-
-  // Per-project bullets — top 5 by message count
-  if (proyectosActivos.length > 0) {
-    lines.push('')
-    for (const p of proyectosActivos.slice(0, 5)) {
-      const badge = p.enRiesgo ? ' 🔴' : ''
-      const when  = relativeLabel(p.ultimoTimestamp)
-      const snip  = p.ultimoMsg
-        ? `— último mensaje: "${p.ultimoMsg.slice(0, 70)}${p.ultimoMsg.length > 70 ? '…' : ''}"`
-        : ''
-      lines.push(`• **${p.nombre}**${badge} · ${p.msgs} msg${p.msgs !== 1 ? 's' : ''} · ${when} ${snip}`)
-    }
-    if (proyectosActivos.length > 5) {
-      lines.push(`• ...y ${proyectosActivos.length - 5} proyecto${proyectosActivos.length - 5 > 1 ? 's' : ''} más`)
-    }
+function estadoLabel(estado: string) {
+  const map: Record<string, string> = {
+    activo: 'Activo', en_riesgo: 'En Riesgo', pausado: 'Pausado', completado: 'Completado'
   }
-
-  // Alerts block
-  if (alertasNuevas.length > 0) {
-    lines.push('')
-    const criticas = alertasNuevas.filter(a => a.nivel === 'critico' || a.nivel === 'alto')
-    if (criticas.length > 0) {
-      lines.push(`⚠️ **${criticas.length} alerta${criticas.length > 1 ? 's' : ''} de nivel alto/crítico** sin resolver:`)
-      for (const a of criticas.slice(0, 3)) {
-        lines.push(`  · [${a.proyecto}] ${a.descripcion.slice(0, 80)}${a.descripcion.length > 80 ? '…' : ''}`)
-      }
-    } else {
-      lines.push(`${alertasNuevas.length} alerta${alertasNuevas.length > 1 ? 's' : ''} abiertas (nivel bajo/medio).`)
-    }
-  }
-
-  return lines.join('\n')
+  return map[estado] ?? estado
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
-export default async function AIDigest72h() {
-  const client = sb()
-  const since72h = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()
+export default function AIDigest72h() {
+  const [data, setData]         = useState<DigestPayload | null>(null)
+  const [loading, setLoading]   = useState(true)
+  const [error, setError]       = useState(false)
+  const [isPending, startTransition] = useTransition()
 
-  // Parallel fetch: messages + alerts in last 72h
-  const [msgRes, alertRes, projRes] = await Promise.all([
-    client
-      .from('messages')
-      .select('project_id, contenido, timestamp')
-      .gte('timestamp', since72h)
-      .order('timestamp', { ascending: false }),
-    client
-      .from('alerts')
-      .select('tipo, nivel, descripcion, project_id, created_at')
-      .eq('resuelta', false)
-      .gte('created_at', since72h),
-    client
-      .from('projects')
-      .select('id, nombre, estado'),
-  ])
+  const load = useCallback(() => {
+    setLoading(true)
+    setError(false)
+    fetch('/api/ai-digest', { cache: 'no-store' })
+      .then(r => r.json())
+      .then(d => { setData(d); setLoading(false) })
+      .catch(() => { setError(true); setLoading(false) })
+  }, [])
 
-  const messages  = msgRes.data   ?? []
-  const alerts    = alertRes.data ?? []
-  const projects  = projRes.data  ?? []
+  useEffect(() => { load() }, [load])
 
-  // Return nothing if no activity
-  if (messages.length === 0 && alerts.length === 0) return null
+  const refresh = () => startTransition(() => { load() })
 
-  const projMap: Record<string, { nombre: string; estado: string }> = {}
-  for (const p of projects) projMap[p.id] = { nombre: p.nombre, estado: p.estado }
+  // ── Nothing to show ──────────────────────────────────────────────────────
+  if (!loading && !error && data && data.proyectos.length === 0) return null
 
-  // Group messages by project
-  const byProject: Record<string, { msgs: number; ultimoMsg: string; ultimoTimestamp: string }> = {}
-  for (const m of messages) {
-    if (!byProject[m.project_id]) {
-      byProject[m.project_id] = { msgs: 0, ultimoMsg: m.contenido ?? '', ultimoTimestamp: m.timestamp }
-    }
-    byProject[m.project_id].msgs++
-    if (m.timestamp > byProject[m.project_id].ultimoTimestamp) {
-      byProject[m.project_id].ultimoMsg       = m.contenido ?? ''
-      byProject[m.project_id].ultimoTimestamp = m.timestamp
-    }
-  }
-
-  const proyectosActivos = Object.entries(byProject)
-    .map(([pid, d]) => ({
-      nombre: projMap[pid]?.nombre ?? pid,
-      enRiesgo: projMap[pid]?.estado === 'en_riesgo',
-      ...d,
-    }))
-    .sort((a, b) => b.msgs - a.msgs)
-
-  const alertasNuevas = alerts.map(a => ({
-    tipo:        a.tipo,
-    nivel:       a.nivel,
-    descripcion: a.descripcion ?? '',
-    proyecto:    projMap[a.project_id]?.nombre ?? '—',
-  }))
-
-  const digestText = buildDigest({
-    proyectosActivos,
-    alertasNuevas,
-    totalMsgs: messages.length,
-    ventanaHoras: 72,
-  })
-
-  if (!digestText) return null
-
-  // Split into lines and render markdown-ish bold
-  const renderLine = (line: string, i: number) => {
-    // Replace **text** with <strong>
-    const parts = line.split(/\*\*(.+?)\*\*/g)
-    const nodes = parts.map((p, j) => j % 2 === 1 ? <strong key={j}>{p}</strong> : p)
-
-    const isBullet = line.startsWith('•') || line.startsWith('  ·')
-    const isEmpty  = line === ''
-
-    if (isEmpty) return <div key={i} style={{ height: '6px' }} />
-    if (isBullet) return (
-      <div key={i} style={{
-        fontSize: '12px', color: '#94a3b8', lineHeight: 1.6,
-        paddingLeft: isBullet && line.startsWith('  ·') ? '20px' : '4px',
-      }}>
-        {nodes}
-      </div>
-    )
-    return (
-      <div key={i} style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.6 }}>
-        {nodes}
-      </div>
-    )
-  }
-
-  const lines = digestText.split('\n')
+  // ── Spinner while loading ────────────────────────────────────────────────
+  const isSpinning = loading || isPending
 
   return (
     <div style={{
       position: 'relative', zIndex: 1,
       marginBottom: '20px',
-      background: 'linear-gradient(135deg, rgba(232,121,47,0.04) 0%, rgba(17,24,39,0.6) 60%)',
-      border: '1px solid rgba(232,121,47,0.14)',
-      borderRadius: '12px',
-      padding: '16px 18px',
-      backdropFilter: 'blur(8px)',
+      background: 'linear-gradient(135deg, rgba(232,121,47,0.05) 0%, rgba(15,23,42,0.7) 60%)',
+      border: '1px solid rgba(232,121,47,0.16)',
+      borderRadius: '14px',
       overflow: 'hidden',
+      backdropFilter: 'blur(10px)',
     }}>
-      {/* Glow accent top-left */}
+
+      {/* Top glow */}
       <div style={{
         position: 'absolute', top: 0, left: 0,
-        width: '180px', height: '60px',
-        background: 'radial-gradient(ellipse, rgba(232,121,47,0.12) 0%, transparent 70%)',
+        width: '220px', height: '70px',
+        background: 'radial-gradient(ellipse, rgba(232,121,47,0.13) 0%, transparent 70%)',
         pointerEvents: 'none',
       }} />
 
-      {/* Header */}
+      {/* ── Header ── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: '8px',
-        marginBottom: '12px',
+        padding: '14px 18px 0',
       }}>
         <div style={{
-          width: '24px', height: '24px', borderRadius: '6px',
+          width: '26px', height: '26px', borderRadius: '7px', flexShrink: 0,
           background: 'linear-gradient(135deg, #E8792F 0%, #c45c1a 100%)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '12px', flexShrink: 0,
-        }}>
-          🤖
-        </div>
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px',
+        }}>🤖</div>
+
         <span style={{
           fontSize: '11px', fontWeight: 700, color: '#E8792F',
           textTransform: 'uppercase', letterSpacing: '0.08em',
         }}>
           Resumen IA · Últimas 72h
         </span>
+
+        {data && !isSpinning && (
+          <span style={{
+            fontSize: '10px', color: '#475569',
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.06)',
+            borderRadius: '4px', padding: '2px 7px', fontWeight: 500,
+          }}>
+            {data.totalMsgs} msgs · {data.proyectos.length} proyecto{data.proyectos.length !== 1 ? 's' : ''}
+          </span>
+        )}
+
         <div style={{ flex: 1 }} />
-        <span style={{
-          fontSize: '10px', color: '#334155', fontWeight: 500,
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(255,255,255,0.06)',
-          borderRadius: '4px', padding: '2px 7px',
-        }}>
-          auto
-        </span>
+
+        {/* Refresh button */}
+        <button
+          onClick={refresh}
+          disabled={isSpinning}
+          title="Actualizar resumen"
+          style={{
+            background: 'rgba(232,121,47,0.08)',
+            border: '1px solid rgba(232,121,47,0.18)',
+            borderRadius: '6px',
+            color: isSpinning ? '#475569' : '#E8792F',
+            cursor: isSpinning ? 'not-allowed' : 'pointer',
+            fontSize: '13px', padding: '4px 8px',
+            display: 'flex', alignItems: 'center', gap: '4px',
+            transition: 'all 0.15s',
+          }}
+        >
+          <span style={{
+            display: 'inline-block',
+            animation: isSpinning ? 'spin 0.8s linear infinite' : 'none',
+          }}>↻</span>
+          <span style={{ fontSize: '10px', fontWeight: 600 }}>
+            {isSpinning ? 'Cargando…' : 'Actualizar'}
+          </span>
+        </button>
       </div>
 
       {/* Divider */}
-      <div style={{ height: '1px', background: 'rgba(232,121,47,0.10)', marginBottom: '12px' }} />
+      <div style={{ height: '1px', background: 'rgba(232,121,47,0.10)', margin: '12px 18px 0' }} />
 
-      {/* Content */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-        {lines.map((line, i) => renderLine(line, i))}
+      {/* ── Body ── */}
+      <div style={{ padding: '12px 18px 16px' }}>
+
+        {/* Loading skeleton */}
+        {isSpinning && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {[80, 60, 90].map((w, i) => (
+              <div key={i} style={{
+                height: '14px', borderRadius: '4px', width: `${w}%`,
+                background: 'rgba(255,255,255,0.05)',
+                animation: 'pulse 1.5s ease-in-out infinite',
+              }} />
+            ))}
+          </div>
+        )}
+
+        {/* Error */}
+        {error && !isSpinning && (
+          <p style={{ fontSize: '12px', color: '#ef4444', margin: 0 }}>
+            No se pudo cargar el resumen. <button onClick={refresh} style={{ background: 'none', border: 'none', color: '#E8792F', cursor: 'pointer', textDecoration: 'underline', fontSize: '12px', padding: 0 }}>Reintentar</button>
+          </p>
+        )}
+
+        {/* Project cards */}
+        {!isSpinning && !error && data && data.proyectos.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {data.proyectos.map(p => {
+              const c = estadoColor(p.estado)
+              return (
+                <div key={p.id} style={{
+                  background: 'rgba(255,255,255,0.025)',
+                  border: `1px solid ${c.dot}22`,
+                  borderLeft: `3px solid ${c.dot}`,
+                  borderRadius: '8px',
+                  padding: '10px 12px',
+                }}>
+                  {/* Row 1: name + badges */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '5px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#e2e8f0' }}>
+                      {p.nombre}
+                    </span>
+                    {/* Estado badge */}
+                    <span style={{
+                      fontSize: '9px', fontWeight: 700, padding: '2px 6px',
+                      borderRadius: '4px', background: c.badge, color: c.text,
+                      textTransform: 'uppercase', letterSpacing: '0.06em',
+                    }}>
+                      {estadoLabel(p.estado)}
+                    </span>
+                    {/* Alertas badge */}
+                    {p.alertas > 0 && (
+                      <span style={{
+                        fontSize: '9px', fontWeight: 700, padding: '2px 6px',
+                        borderRadius: '4px', background: 'rgba(245,158,11,0.12)', color: '#fbbf24',
+                        textTransform: 'uppercase', letterSpacing: '0.06em',
+                      }}>
+                        ⚠️ {p.alertas} alerta{p.alertas > 1 ? 's' : ''}
+                      </span>
+                    )}
+                    <div style={{ flex: 1 }} />
+                    {/* Stats */}
+                    <span style={{ fontSize: '10px', color: '#475569', whiteSpace: 'nowrap' }}>
+                      💬 {p.msgs} msg{p.msgs !== 1 ? 's' : ''} · {relLabel(p.ultimoTimestamp)}
+                    </span>
+                  </div>
+
+                  {/* Row 2: senders */}
+                  {p.senders.length > 0 && (
+                    <div style={{ fontSize: '10px', color: '#64748b', marginBottom: '4px' }}>
+                      👤 {p.senders.join(', ')}
+                    </div>
+                  )}
+
+                  {/* Row 3: last message snippet */}
+                  {p.ultimoMensaje && (
+                    <p style={{
+                      fontSize: '11px', color: '#94a3b8', margin: 0,
+                      lineHeight: 1.5, fontStyle: 'italic',
+                      borderLeft: '2px solid rgba(255,255,255,0.06)',
+                      paddingLeft: '8px',
+                    }}>
+                      "{p.ultimoMensaje.slice(0, 120)}{p.ultimoMensaje.length > 120 ? '…' : ''}"
+                    </p>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
+
+      {/* CSS animations */}
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse {
+          0%, 100% { opacity: 0.4; }
+          50%       { opacity: 0.8; }
+        }
+      `}</style>
     </div>
   )
 }
