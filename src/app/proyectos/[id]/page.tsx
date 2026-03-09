@@ -5,6 +5,14 @@ import { Proyecto, Mensaje, Alerta, Developer, ProjectDeveloper } from '@/lib/ty
 import { notFound } from 'next/navigation'
 import DeveloperAssignerWrapper from './DeveloperAssignerWrapper'
 
+// ── Source config ─────────────────────────────────────────────────────────────
+const SOURCE_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; icon: string }> = {
+  whatsapp: { label: 'WhatsApp', color: '#4ade80', bg: 'rgba(34,197,94,0.08)',   border: 'rgba(34,197,94,0.18)',   icon: '💬' },
+  slack:    { label: 'Slack',    color: '#818cf8', bg: 'rgba(129,140,248,0.08)', border: 'rgba(129,140,248,0.18)', icon: '⚡' },
+  manual:   { label: 'Manual',   color: '#94a3b8', bg: 'rgba(148,163,184,0.08)', border: 'rgba(148,163,184,0.15)', icon: '✏️' },
+  meet:     { label: 'Meet',     color: '#60a5fa', bg: 'rgba(96,165,250,0.08)',  border: 'rgba(96,165,250,0.15)',  icon: '🎥' },
+}
+
 const nivelColor: Record<string, string> = {
   critico: '#ef4444', alto: '#f97316', medio: '#f59e0b', bajo: '#6b7280',
 }
@@ -51,7 +59,7 @@ export default async function ProyectoDetalle({
   searchParams: Promise<{tab?:string}>
 }) {
   const {id} = await params
-  const {tab='mensajes'} = await searchParams
+  const {tab='mensajes', fuente: _fuente} = await searchParams
   const {proyecto, mensajes, alertas, allDevelopers, assigned} = await getData(id)
   if (!proyecto) notFound()
 
@@ -60,6 +68,21 @@ export default async function ProyectoDetalle({
     {key:'alertas',  label:`⚠️ Alertas${alertas.length>0?' ('+alertas.length+')':''}`},
     {key:'onboarding', label:'🚀 Onboarding'},
   ]
+
+  // Source filter from searchParams
+  const {tab: _t, fuente: fuenteFilter} = await searchParams
+
+  // Count messages per source
+  const sourceCounts = mensajes.reduce((acc, m) => {
+    const src = (m as any).fuente ?? 'manual'
+    acc[src] = (acc[src] ?? 0) + 1
+    return acc
+  }, {} as Record<string, number>)
+
+  // Filtered messages
+  const mensajesFiltrados = fuenteFilter && fuenteFilter !== 'todos'
+    ? mensajes.filter(m => (m as any).fuente === fuenteFilter)
+    : mensajes
 
   const assignedDevs = assigned.map(a => a.developer).filter(Boolean)
 
@@ -132,27 +155,94 @@ export default async function ProyectoDetalle({
 
       {/* Tab: Messages */}
       {tab==='mensajes' && (
-        <div style={{display:'flex',flexDirection:'column',gap:'6px'}}>
-          {mensajes.length===0 ? (
-            <div style={{textAlign:'center',padding:'40px',color:'#A0AEC0',background:'rgba(17,24,39,0.85)',border:'1px solid rgba(255,255,255,0.10)',borderRadius:'12px'}}>Sin mensajes</div>
-          ) : mensajes.map(msg => (
-            <div key={msg.id} style={{
-              display:'flex',gap:'12px',padding:'10px 14px',borderRadius:'8px',
-              background:msg.es_del_cliente?'rgba(17,24,39,0.6)':'rgba(232,121,47,0.05)',
-              border:`1px solid ${msg.es_del_cliente?'rgba(255,255,255,0.05)':'rgba(232,121,47,0.12)'}`,
-            }}>
-              <div style={{width:'28px',height:'28px',borderRadius:'50%',flexShrink:0,background:msg.es_del_cliente?'rgba(100,116,139,0.3)':'rgba(232,121,47,0.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'12px'}}>
-                {msg.es_del_cliente?'👤':'🟠'}
-              </div>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{display:'flex',gap:'8px',alignItems:'center',marginBottom:'3px'}}>
-                  <span style={{fontSize:'12px',fontWeight:600,color:msg.es_del_cliente?'#94a3b8':'#E8792F'}}>{msg.sender}</span>
-                  <span style={{fontSize:'11px',color:'#4a5568'}}>{formatTime(msg.timestamp)}</span>
-                </div>
-                <p style={{fontSize:'13px',color:'#cbd5e0',margin:0,lineHeight:1.5,wordBreak:'break-word'}}>{msg.contenido}</p>
-              </div>
+        <div>
+          {/* ── Source filter bar ── */}
+          {mensajes.length > 0 && (
+            <div style={{display:'flex',gap:'6px',marginBottom:'14px',flexWrap:'wrap',alignItems:'center'}}>
+              <span style={{fontSize:'11px',color:'#4a5568',marginRight:'2px'}}>Fuente:</span>
+              {(['todos', ...Object.keys(sourceCounts)] as string[]).map(src => {
+                const isActive = (fuenteFilter ?? 'todos') === src
+                const cfg = SOURCE_CONFIG[src]
+                const count = src === 'todos' ? mensajes.length : sourceCounts[src]
+                return (
+                  <Link
+                    key={src}
+                    href={`/proyectos/${id}?tab=mensajes${src !== 'todos' ? `&fuente=${src}` : ''}`}
+                    style={{textDecoration:'none'}}
+                  >
+                    <span style={{
+                      display:'inline-flex', alignItems:'center', gap:'4px',
+                      fontSize:'11px', fontWeight: isActive ? 700 : 500,
+                      padding:'3px 9px', borderRadius:'6px', cursor:'pointer',
+                      background: isActive ? (cfg?.bg ?? 'rgba(232,121,47,0.12)') : 'rgba(255,255,255,0.04)',
+                      color: isActive ? (cfg?.color ?? '#E8792F') : '#64748b',
+                      border: `1px solid ${isActive ? (cfg?.border ?? 'rgba(232,121,47,0.25)') : 'rgba(255,255,255,0.08)'}`,
+                      transition: 'all 0.15s',
+                    }}>
+                      {cfg?.icon ?? '📋'} {cfg?.label ?? 'Todos'} <span style={{opacity:0.6}}>({count})</span>
+                    </span>
+                  </Link>
+                )
+              })}
             </div>
-          ))}
+          )}
+
+          {/* ── Message list ── */}
+          <div style={{display:'flex',flexDirection:'column',gap:'6px'}}>
+            {mensajesFiltrados.length === 0 ? (
+              <div style={{textAlign:'center',padding:'40px',color:'#A0AEC0',background:'rgba(17,24,39,0.85)',border:'1px solid rgba(255,255,255,0.10)',borderRadius:'12px'}}>
+                Sin mensajes{fuenteFilter && fuenteFilter !== 'todos' ? ` de ${SOURCE_CONFIG[fuenteFilter]?.label ?? fuenteFilter}` : ''}
+              </div>
+            ) : mensajesFiltrados.map(msg => {
+              const fuente = (msg as any).fuente ?? 'manual'
+              const meta   = (msg as any).metadata ?? {}
+              const cfg    = SOURCE_CONFIG[fuente] ?? SOURCE_CONFIG.manual
+              const channelName = meta.channel_name ? `#${meta.channel_name}` : null
+
+              return (
+                <div key={msg.id} style={{
+                  display:'flex', gap:'12px', padding:'10px 14px', borderRadius:'8px',
+                  background: msg.es_del_cliente ? 'rgba(17,24,39,0.6)' : cfg.bg,
+                  border: `1px solid ${msg.es_del_cliente ? 'rgba(255,255,255,0.05)' : cfg.border}`,
+                  borderLeft: `3px solid ${msg.es_del_cliente ? 'rgba(100,116,139,0.3)' : cfg.color}`,
+                }}>
+                  {/* Avatar */}
+                  <div style={{
+                    width:'28px', height:'28px', borderRadius:'50%', flexShrink:0,
+                    background: msg.es_del_cliente ? 'rgba(100,116,139,0.3)' : `${cfg.color}25`,
+                    display:'flex', alignItems:'center', justifyContent:'center', fontSize:'12px',
+                  }}>
+                    {msg.es_del_cliente ? '👤' : cfg.icon}
+                  </div>
+
+                  <div style={{flex:1,minWidth:0}}>
+                    {/* Header row */}
+                    <div style={{display:'flex',gap:'6px',alignItems:'center',marginBottom:'3px',flexWrap:'wrap'}}>
+                      <span style={{fontSize:'12px',fontWeight:700,color: msg.es_del_cliente ? '#94a3b8' : cfg.color}}>
+                        {msg.sender}
+                      </span>
+                      {/* Source badge */}
+                      <span style={{
+                        fontSize:'9px', fontWeight:700, padding:'1px 5px', borderRadius:'3px',
+                        background:`${cfg.color}18`, color:cfg.color,
+                        textTransform:'uppercase', letterSpacing:'0.05em', border:`1px solid ${cfg.color}25`,
+                      }}>
+                        {cfg.label}
+                        {channelName && <span style={{opacity:0.7}}> · {channelName}</span>}
+                      </span>
+                      <span style={{fontSize:'11px',color:'#4a5568',marginLeft:'auto'}}>
+                        {formatTime(msg.timestamp)}
+                      </span>
+                    </div>
+                    {/* Content */}
+                    <p style={{fontSize:'13px',color:'#cbd5e0',margin:0,lineHeight:1.5,wordBreak:'break-word'}}>
+                      {msg.contenido}
+                    </p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 
