@@ -56,10 +56,10 @@ export default async function ProyectoDetalle({
   params, searchParams
 }: {
   params: Promise<{id:string}>
-  searchParams: Promise<{tab?:string}>
+  searchParams: Promise<{tab?:string; fuente?:string}>
 }) {
   const {id} = await params
-  const {tab='mensajes', fuente: _fuente} = await searchParams
+  const {tab='mensajes', fuente: fuenteFilter} = await searchParams
   const {proyecto, mensajes, alertas, allDevelopers, assigned} = await getData(id)
   if (!proyecto) notFound()
 
@@ -68,9 +68,6 @@ export default async function ProyectoDetalle({
     {key:'alertas',  label:`⚠️ Alertas${alertas.length>0?' ('+alertas.length+')':''}`},
     {key:'onboarding', label:'🚀 Onboarding'},
   ]
-
-  // Source filter from searchParams
-  const {tab: _t, fuente: fuenteFilter} = await searchParams
 
   // Count messages per source
   const sourceCounts = mensajes.reduce((acc, m) => {
