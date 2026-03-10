@@ -49,17 +49,15 @@ export async function getAllowedProjectIds(profile: UserProfile): Promise<string
   )
 
   if (profile.rol === 'supervisor') {
-    // Supervisor sees all projects assigned to their team
-    // Find all developers whose supervisor is this user (by developer_id link)
-    // For now: supervisor sees ALL projects (same as admin for project view)
-    // But only within their team's assignments
+    // Supervisor sees projects assigned to their team's developers
+    // Their developers are user_profiles with rol='developer' (all devs for now)
     const { data: teamDevs } = await admin
       .from('user_profiles')
       .select('developer_id')
       .eq('rol', 'developer')
       .not('developer_id', 'is', null)
 
-    const devIds = (teamDevs ?? []).map(d => d.developer_id).filter(Boolean)
+    const devIds = (teamDevs ?? []).map((d: any) => d.developer_id).filter(Boolean)
     if (!devIds.length) return []
 
     const { data: assignments } = await admin
@@ -67,30 +65,28 @@ export async function getAllowedProjectIds(profile: UserProfile): Promise<string
       .select('project_id')
       .in('developer_id', devIds)
 
-    const projectIds = [...new Set((assignments ?? []).map(a => a.project_id))]
-    return projectIds
+    return [...new Set((assignments ?? []).map((a: any) => a.project_id))]
   }
 
   if (profile.rol === 'developer') {
-    // Developer sees only their assigned projects
+    // Developer sees only their assigned projects (same layout as supervisor, filtered)
     if (!profile.developer_id) return []
     const { data: assignments } = await admin
       .from('project_developers')
       .select('project_id')
       .eq('developer_id', profile.developer_id)
 
-    return (assignments ?? []).map(a => a.project_id)
+    return (assignments ?? []).map((a: any) => a.project_id)
   }
 
-  if (profile.rol === 'client_success' || profile.rol === 'cs_user') {
-    // CS sees client-facing projects (all active/at-risk for now)
-    // TODO: refine when client projects are tagged
-    const { data: projects } = await admin
-      .from('projects')
-      .select('id')
-      .in('estado', ['activo', 'en_riesgo'])
+  if (profile.rol === 'client_success') {
+    // CS — vista en construcción por ahora, se implementará cuando Jennifer configure la suya
+    return 'locked' as any
+  }
 
-    return (projects ?? []).map(p => p.id)
+  if (profile.rol === 'cs_user') {
+    // CS Users ven TODOS los proyectos (sin filtro, igual que admin en visibilidad)
+    return null
   }
 
   return []

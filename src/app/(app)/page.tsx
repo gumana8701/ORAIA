@@ -5,9 +5,14 @@ import ProjectFilters from '@/components/ProjectFilters'
 import AIDigest72h from '@/components/AIDigest72h'
 import { Proyecto } from '@/lib/types'
 import { getSessionProfile, getAllowedProjectIds } from '@/lib/auth'
+import { redirect } from 'next/navigation'
 
 async function getData() {
   const profile = await getSessionProfile()
+
+  // Roles not yet configured → redirect to their own page
+  if (profile.rol === 'client_success') redirect('/mi-vista')
+
   const allowedIds = await getAllowedProjectIds(profile)
 
   const supabase = createClient(
