@@ -14,10 +14,11 @@ type UserProfile = {
 type Developer = { id: string; nombre: string; emoji: string; color: string }
 
 const ROL_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
-  admin:      { label: 'Admin',      color: '#E8792F', bg: 'rgba(232,121,47,0.12)', icon: '👑' },
-  supervisor: { label: 'Supervisor', color: '#818cf8', bg: 'rgba(129,140,248,0.12)', icon: '🔭' },
-  developer:  { label: 'Developer',  color: '#4ade80', bg: 'rgba(34,197,94,0.10)',  icon: '💻' },
-  client:     { label: 'Cliente',    color: '#60a5fa', bg: 'rgba(96,165,250,0.10)', icon: '🤝' },
+  admin:          { label: 'Admin',          color: '#E8792F', bg: 'rgba(232,121,47,0.12)', icon: '👑' },
+  supervisor:     { label: 'Supervisor',     color: '#818cf8', bg: 'rgba(129,140,248,0.12)', icon: '🔭' },
+  client_success: { label: 'Client Success', color: '#60a5fa', bg: 'rgba(96,165,250,0.10)', icon: '🤝' },
+  cs_user:        { label: 'CS User',        color: '#67e8f9', bg: 'rgba(103,232,249,0.10)', icon: '👤' },
+  developer:      { label: 'Developer',      color: '#4ade80', bg: 'rgba(34,197,94,0.10)',  icon: '💻' },
 }
 
 export default function UserManagementClient({
@@ -118,15 +119,16 @@ export default function UserManagementClient({
                 <select value={form.rol} onChange={e => setForm(f => ({ ...f, rol: e.target.value }))} style={inputStyle}>
                   <option value="admin">👑 Admin</option>
                   <option value="supervisor">🔭 Supervisor</option>
+                  <option value="client_success">🤝 Client Success</option>
+                  <option value="cs_user">👤 CS User</option>
                   <option value="developer">💻 Developer</option>
-                  <option value="client">🤝 Cliente</option>
                 </select>
               </div>
             </div>
 
-            {/* Developer link */}
+            {/* Staff link */}
             <div style={{ marginBottom: '20px' }}>
-              <label style={labelStyle}>Vincular a desarrollador (opcional)</label>
+              <label style={labelStyle}>Vincular a Staff (opcional)</label>
               <select value={form.developer_id} onChange={e => setForm(f => ({ ...f, developer_id: e.target.value }))} style={inputStyle}>
                 <option value="">— Sin vincular —</option>
                 {developers.map(d => (
