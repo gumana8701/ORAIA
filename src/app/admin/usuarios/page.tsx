@@ -4,20 +4,22 @@ import Link from 'next/link'
 import UserManagementClient from './UserManagementClient'
 
 async function getData() {
-  const sb = await createClient()
-  const { data: { user } } = await sb.auth.getUser()
-  if (!user) redirect('/login')
-
-  const { data: myProfile } = await sb.from('user_profiles').select('rol').eq('id', user.id).single()
-  if (myProfile?.rol !== 'admin') redirect('/')
-
-  // Use service role for admin queries
+  // Use service role to bypass RLS for admin operations
   const { createClient: createAdmin } = await import('@supabase/supabase-js')
   const admin = createAdmin(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
+
+  // Verify session via cookie-based server client
+  const sb = await createClient()
+  const { data: { user } } = await sb.auth.getUser()
+  if (!user) redirect('/login')
+
+  // Check role via service role (bypasses RLS)
+  const { data: myProfile } = await admin.from('user_profiles').select('rol').eq('id', user.id).single()
+  if (myProfile?.rol !== 'admin') redirect('/')
 
   const [usersRes, devsRes] = await Promise.all([
     admin.from('user_profiles').select('*').order('created_at', { ascending: false }),
