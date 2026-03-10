@@ -4,14 +4,27 @@ import ProjectCard from '@/components/ProjectCard'
 import ProjectFilters from '@/components/ProjectFilters'
 import AIDigest72h from '@/components/AIDigest72h'
 import { Proyecto } from '@/lib/types'
+import { getSessionProfile, getAllowedProjectIds } from '@/lib/auth'
 
 async function getData() {
+  const profile = await getSessionProfile()
+  const allowedIds = await getAllowedProjectIds(profile)
+
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL as string,
     process.env.SUPABASE_SERVICE_ROLE_KEY as string
   )
+
+  // Build project query with role-based filter
+  let projQuery = supabase.from('projects').select('*').order('ultima_actividad', { ascending: false, nullsFirst: false })
+  if (allowedIds !== null) {
+    projQuery = allowedIds.length > 0
+      ? projQuery.in('id', allowedIds)
+      : projQuery.eq('id', '00000000-0000-0000-0000-000000000000') // empty result
+  }
+
   const [projRes, msgRes, pdRes, devRes] = await Promise.all([
-    supabase.from('projects').select('*').order('ultima_actividad', { ascending: false, nullsFirst: false }),
+    projQuery,
     supabase.from('messages').select('*', { count: 'exact', head: true }).gte('timestamp', new Date().toISOString().slice(0, 10)),
     supabase.from('project_developers').select('project_id, developer:developers(id,nombre,emoji,color,es_supervisor)'),
     supabase.from('developers').select('*').eq('activo', true).order('nombre'),
@@ -34,7 +47,16 @@ async function getData() {
     mensajesHoy: msgRes.count ?? 0,
     devsByProject,
     allDevs,
+    profile,
   }
+}
+
+const ROL_GREETING: Record<string, string> = {
+  admin:          '👑 Vista completa',
+  supervisor:     '🔭 Vista de equipo',
+  client_success: '🤝 Client Success',
+  cs_user:        '👤 Mi vista',
+  developer:      '💻 Mis proyectos',
 }
 
 export default async function Dashboard({
@@ -42,7 +64,7 @@ export default async function Dashboard({
 }: {
   searchParams: Promise<{ q?: string; status?: string; color?: string; dev?: string }>
 }) {
-  const { proyectos, mensajesHoy, devsByProject, allDevs } = await getData()
+  const { proyectos, mensajesHoy, devsByProject, allDevs, profile } = await getData()
   const { q = '', status = '', color = '', dev = '' } = await searchParams
 
   let filtered = proyectos
@@ -78,11 +100,21 @@ export default async function Dashboard({
 
       {/* Header */}
       <div style={{ marginBottom: '28px', position: 'relative', zIndex: 1 }}>
-        <h1 className="headline headline-gradient" style={{ marginBottom: '6px' }}>
-          Proyectos
-        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+          <h1 className="headline headline-gradient" style={{ margin: 0 }}>
+            Proyectos
+          </h1>
+          <span style={{
+            fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '6px',
+            background: 'rgba(232,121,47,0.10)', color: '#E8792F',
+            border: '1px solid rgba(232,121,47,0.20)',
+            letterSpacing: '0.03em',
+          }}>
+            {ROL_GREETING[profile.rol] ?? profile.rol} · {profile.nombre}
+          </span>
+        </div>
         <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>
-          Vista en tiempo real · {proyectos.length} proyectos activos
+          Vista en tiempo real · {proyectos.length} proyecto{proyectos.length !== 1 ? 's' : ''}
         </p>
       </div>
 

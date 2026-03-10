@@ -169,6 +169,27 @@ export default function Sidebar() {
         </div>
       </button>
 
+      {/* Logout */}
+      <button
+        onClick={async () => {
+          const { createClient } = await import('@/lib/supabase/client')
+          await createClient().auth.signOut()
+          window.location.href = '/login'
+        }}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
+          padding: '8px 12px', borderRadius: '8px', border: 'none',
+          background: 'transparent', cursor: 'pointer', marginBottom: '10px',
+          color: isLight ? 'rgba(10,15,30,0.4)' : 'rgba(160,174,192,0.4)',
+          fontSize: '12px', fontWeight: 500,
+          transition: 'all 0.15s',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
+        onMouseLeave={e => (e.currentTarget.style.color = isLight ? 'rgba(10,15,30,0.4)' : 'rgba(160,174,192,0.4)')}
+      >
+        <span>🚪</span> Cerrar sesión
+      </button>
+
       {/* Footer */}
       <div style={{ textAlign: 'center' }}>
         <div style={{
