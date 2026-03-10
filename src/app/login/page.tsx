@@ -15,8 +15,13 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true); setError('')
     const { error } = await sb.auth.signInWithPassword({ email, password })
-    if (error) { setError(error.message); setLoading(false) }
-    else router.push('/')
+    if (error) {
+      setError(error.message)
+      setLoading(false)
+    } else {
+      // Full page reload ensures middleware reads the new session cookie correctly
+      window.location.href = '/'
+    }
   }
 
   return (
