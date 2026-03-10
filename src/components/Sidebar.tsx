@@ -4,10 +4,11 @@ import { usePathname } from 'next/navigation'
 import { useTheme } from '@/lib/ThemeContext'
 
 const nav = [
-  { href: '/insights',   label: 'Insights',   icon: '📊' },
-  { href: '/',           label: 'Proyectos',  icon: '📂' },
-  { href: '/alertas',    label: 'Alertas',    icon: '⚠️' },
-  { href: '/onboarding', label: 'Onboarding', icon: '🚀' },
+  { href: '/insights',        label: 'Insights',   icon: '📊' },
+  { href: '/',                label: 'Proyectos',  icon: '📂' },
+  { href: '/alertas',         label: 'Alertas',    icon: '⚠️' },
+  { href: '/onboarding',      label: 'Onboarding', icon: '🚀' },
+  { href: '/admin/usuarios',  label: 'Usuarios',   icon: '🔐' },
 ]
 
 export default function Sidebar() {
