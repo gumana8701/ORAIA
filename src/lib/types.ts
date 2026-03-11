@@ -19,10 +19,6 @@ export interface Proyecto {
   fecha_inicio?: string
   created_at?: string
   updated_at?: string
-  maturity_stage?: number | null
-  business_objectives?: Record<string, number | null> | null
-  org_challenges?: Record<string, boolean> | null
-  modernization_approach?: string | null
 }
 
 export interface Mensaje {

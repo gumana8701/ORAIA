@@ -6,7 +6,7 @@ import { notFound } from 'next/navigation'
 import DeveloperAssignerWrapper from './DeveloperAssignerWrapper'
 import MeetingBriefList from '@/components/MeetingBriefList'
 import ProjectKPIs from '@/components/ProjectKPIs'
-import ProjectStrategicProfile from '@/components/ProjectStrategicProfile'
+import ProjectKPIsEditor from '@/components/ProjectKPIsEditor'
 
 // ── Source config ─────────────────────────────────────────────────────────────
 const SOURCE_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; icon: string }> = {
@@ -75,7 +75,7 @@ export default async function ProyectoDetalle({
     {key:'reuniones', label:`🎥 Reuniones${meetingBriefs.length>0?' ('+meetingBriefs.length+')':''}`},
     {key:'alertas',  label:`⚠️ Alertas${alertas.length>0?' ('+alertas.length+')':''}`},
     {key:'onboarding', label:'🚀 Onboarding'},
-    {key:'perfil', label:'📋 Perfil'},
+    {key:'perfil', label:'🎯 KPIs'},
   ]
 
   // Count messages per source
@@ -295,17 +295,9 @@ export default async function ProyectoDetalle({
         </div>
       )}
 
-      {/* Tab: Perfil Estratégico */}
+      {/* Tab: KPIs */}
       {tab==='perfil' && (
-        <ProjectStrategicProfile
-          projectId={id}
-          initialData={{
-            maturity_stage: proyecto.maturity_stage ?? null,
-            business_objectives: proyecto.business_objectives ?? null,
-            org_challenges: proyecto.org_challenges ?? null,
-            modernization_approach: proyecto.modernization_approach ?? null,
-          }}
-        />
+        <ProjectKPIsEditor projectId={id} initialKpis={kpis} />
       )}
     </div>
   )
