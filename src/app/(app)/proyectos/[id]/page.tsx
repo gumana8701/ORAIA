@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Proyecto, Mensaje, Alerta, Developer, ProjectDeveloper } from '@/lib/types'
 import { notFound } from 'next/navigation'
 import DeveloperAssignerWrapper from './DeveloperAssignerWrapper'
+import MeetingBriefList from '@/components/MeetingBriefList'
 
 // ── Source config ─────────────────────────────────────────────────────────────
 const SOURCE_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; icon: string }> = {
@@ -36,12 +37,13 @@ function formatTime(iso: string): string {
 
 async function getData(id: string) {
   const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
-  const [projRes, msgRes, alertRes, devsRes, assignedRes] = await Promise.all([
+  const [projRes, msgRes, alertRes, devsRes, assignedRes, briefsRes] = await Promise.all([
     sb.from('projects').select('*').eq('id', id).single(),
     sb.from('messages').select('*').eq('project_id', id).order('timestamp',{ascending:false}).limit(100),
     sb.from('alerts').select('*').eq('project_id', id).eq('resuelta',false).order('created_at',{ascending:false}),
     sb.from('developers').select('*').eq('activo',true).order('es_supervisor',{ascending:false}),
     sb.from('project_developers').select('*, developer:developers(*)').eq('project_id', id),
+    sb.from('meeting_briefs').select('id,title,meeting_date,drive_link,summary,decisions,action_items,participants,ai_confidence').eq('project_id', id).order('meeting_date',{ascending:false}).limit(50),
   ])
   return {
     proyecto: projRes.data as Proyecto | null,
@@ -49,6 +51,7 @@ async function getData(id: string) {
     alertas: (alertRes.data ?? []) as Alerta[],
     allDevelopers: (devsRes.data ?? []) as Developer[],
     assigned: (assignedRes.data ?? []) as (ProjectDeveloper & { developer: Developer })[],
+    meetingBriefs: (briefsRes.data ?? []) as any[],
   }
 }
 
@@ -60,11 +63,12 @@ export default async function ProyectoDetalle({
 }) {
   const {id} = await params
   const {tab='mensajes', fuente: fuenteFilter} = await searchParams
-  const {proyecto, mensajes, alertas, allDevelopers, assigned} = await getData(id)
+  const {proyecto, mensajes, alertas, allDevelopers, assigned, meetingBriefs} = await getData(id)
   if (!proyecto) notFound()
 
   const tabs = [
     {key:'mensajes', label:'💬 Mensajes'},
+    {key:'reuniones', label:`🎥 Reuniones${meetingBriefs.length>0?' ('+meetingBriefs.length+')':''}`},
     {key:'alertas',  label:`⚠️ Alertas${alertas.length>0?' ('+alertas.length+')':''}`},
     {key:'onboarding', label:'🚀 Onboarding'},
   ]
@@ -241,6 +245,11 @@ export default async function ProyectoDetalle({
             })}
           </div>
         </div>
+      )}
+
+      {/* Tab: Reuniones */}
+      {tab==='reuniones' && (
+        <MeetingBriefList briefs={meetingBriefs} />
       )}
 
       {/* Tab: Alerts */}
