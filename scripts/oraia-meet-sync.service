@@ -1,0 +1,14 @@
+[Unit]
+Description=ORAIA Meet Brief Sync
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/.openclaw/workspace/ORAIA
+ExecStart=/usr/bin/node scripts/meet-sync.js
+EnvironmentFile=/root/.openclaw/workspace/ORAIA/.env.local
+StandardOutput=append:/var/log/oraia-meet-sync.log
+StandardError=append:/var/log/oraia-meet-sync.log
+
+[Install]
+WantedBy=multi-user.target

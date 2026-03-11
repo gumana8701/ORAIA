@@ -47,7 +47,6 @@ chats/
 
 # WhatsApp bot — server-only, not needed for Vercel
 whatsapp/
-scripts/
 venv/
 __pycache__/
 *.py
