@@ -5,6 +5,7 @@ import { Proyecto, Mensaje, Alerta, Developer, ProjectDeveloper } from '@/lib/ty
 import { notFound } from 'next/navigation'
 import DeveloperAssignerWrapper from './DeveloperAssignerWrapper'
 import MeetingBriefList from '@/components/MeetingBriefList'
+import ProjectKPIs from '@/components/ProjectKPIs'
 
 // ── Source config ─────────────────────────────────────────────────────────────
 const SOURCE_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; icon: string }> = {
@@ -44,6 +45,7 @@ async function getData(id: string) {
     sb.from('developers').select('*').eq('activo',true).order('es_supervisor',{ascending:false}),
     sb.from('project_developers').select('*, developer:developers(*)').eq('project_id', id),
     sb.from('meeting_briefs').select('id,title,meeting_date,drive_link,summary,decisions,action_items,participants,ai_confidence').eq('project_id', id).order('meeting_date',{ascending:false}).limit(50),
+    sb.from('project_kpis').select('id,kpi_text,categoria,meta,confirmado').eq('project_id', id).order('created_at',{ascending:true}),
   ])
   return {
     proyecto: projRes.data as Proyecto | null,
@@ -52,6 +54,7 @@ async function getData(id: string) {
     allDevelopers: (devsRes.data ?? []) as Developer[],
     assigned: (assignedRes.data ?? []) as (ProjectDeveloper & { developer: Developer })[],
     meetingBriefs: (briefsRes.data ?? []) as any[],
+    kpis: (kpisRes.data ?? []) as any[],
   }
 }
 
@@ -63,7 +66,7 @@ export default async function ProyectoDetalle({
 }) {
   const {id} = await params
   const {tab='mensajes', fuente: fuenteFilter} = await searchParams
-  const {proyecto, mensajes, alertas, allDevelopers, assigned, meetingBriefs} = await getData(id)
+  const {proyecto, mensajes, alertas, allDevelopers, assigned, meetingBriefs, kpis} = await getData(id)
   if (!proyecto) notFound()
 
   const tabs = [
@@ -99,15 +102,18 @@ export default async function ProyectoDetalle({
       {/* Header */}
       <div style={{background:'rgba(17,24,39,0.85)',border:'1px solid rgba(255,255,255,0.10)',borderRadius:'12px',padding:'24px',marginBottom:'24px',position:'relative',overflow:'hidden'}}>
         <div style={{position:'absolute',top:0,right:0,width:'192px',height:'192px',background:'rgba(232,121,47,0.04)',borderRadius:'50%',filter:'blur(60px)',pointerEvents:'none'}}/>
-        <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between'}}>
-          <div>
+        <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:'16px',flexWrap:'wrap'}}>
+          <div style={{flex:1,minWidth:0}}>
             <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'4px'}}>
               {proyecto.color_emoji && <span style={{fontSize:'18px'}}>{proyecto.color_emoji}</span>}
               <h1 style={{fontSize:'24px',fontWeight:800,color:'#fff',margin:0}}>{proyecto.nombre}</h1>
             </div>
             <p style={{color:'#A0AEC0',fontSize:'13px',margin:0}}>{proyecto.cliente}</p>
           </div>
-          <StatusBadge estado={proyecto.estado}/>
+          <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:'8px',flexShrink:0}}>
+            <StatusBadge estado={proyecto.estado}/>
+            <ProjectKPIs kpis={kpis} projectId={id} />
+          </div>
         </div>
 
         {/* Stats */}
