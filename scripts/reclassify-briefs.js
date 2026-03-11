@@ -6,15 +6,26 @@
 
 require('dotenv').config({ path: '.env.local' });
 const https = require('https');
+const path = require('path');
+const { GoogleAuth } = require('google-auth-library');
 
 const {
   GOOGLE_OAUTH_CLIENT_ID,
   GOOGLE_OAUTH_CLIENT_SECRET,
   GOOGLE_OAUTH_REFRESH_TOKEN,
-  GEMINI_API_KEY,
   NEXT_PUBLIC_SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY
 } = process.env;
+
+const VERTEX_PROJECT = 'genial-shuttle-489816-d4';
+const VERTEX_LOCATION = 'us-central1';
+const SERVICE_ACCOUNT_PATH = path.join(__dirname, '..', 'google-service-account.json');
+
+// Shared Google auth client for Vertex AI
+const vertexAuth = new GoogleAuth({
+  keyFile: SERVICE_ACCOUNT_PATH,
+  scopes: ['https://www.googleapis.com/auth/cloud-platform']
+});
 
 function httpsRequest(options, body = null) {
   return new Promise((resolve, reject) => {
@@ -106,16 +117,17 @@ Responde SOLO con JSON válido con esta estructura exacta:
   "confidence": 0.0
 }`;
 
+  const token = await vertexAuth.getAccessToken();
   const res = await httpsRequest({
-    hostname: 'generativelanguage.googleapis.com',
-    path: `/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+    hostname: `${VERTEX_LOCATION}-aiplatform.googleapis.com`,
+    path: `/v1/projects/${VERTEX_PROJECT}/locations/${VERTEX_LOCATION}/publishers/google/models/gemini-2.0-flash-001:generateContent`,
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' }
-  }, { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.1 } });
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+  }, { contents: [{ parts: [{ text: prompt }], role: 'user' }], generationConfig: { temperature: 0.1 } });
 
   if (res.status === 429) {
-    console.log('  ⏳ Rate limit, waiting 30s...');
-    await new Promise(r => setTimeout(r, 30000));
+    console.log('  ⏳ Rate limit, waiting 10s...');
+    await new Promise(r => setTimeout(r, 10000));
     return classifyWithGemini(briefContent, briefName, projects);
   }
 
@@ -124,7 +136,7 @@ Responde SOLO con JSON válido con esta estructura exacta:
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     return jsonMatch ? JSON.parse(jsonMatch[0]) : null;
   } catch (e) {
-    console.error('  Gemini parse error:', e.message);
+    console.error('  Gemini parse error:', e.message, 'status:', res.status);
     return null;
   }
 }

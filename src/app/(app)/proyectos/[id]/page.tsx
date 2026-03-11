@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation'
 import DeveloperAssignerWrapper from './DeveloperAssignerWrapper'
 import MeetingBriefList from '@/components/MeetingBriefList'
 import ProjectKPIs from '@/components/ProjectKPIs'
+import ProjectStrategicProfile from '@/components/ProjectStrategicProfile'
 
 // ── Source config ─────────────────────────────────────────────────────────────
 const SOURCE_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; icon: string }> = {
@@ -38,7 +39,7 @@ function formatTime(iso: string): string {
 
 async function getData(id: string) {
   const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
-  const [projRes, msgRes, alertRes, devsRes, assignedRes, briefsRes] = await Promise.all([
+  const [projRes, msgRes, alertRes, devsRes, assignedRes, briefsRes, kpisRes] = await Promise.all([
     sb.from('projects').select('*').eq('id', id).single(),
     sb.from('messages').select('*').eq('project_id', id).order('timestamp',{ascending:false}).limit(100),
     sb.from('alerts').select('*').eq('project_id', id).eq('resuelta',false).order('created_at',{ascending:false}),
@@ -74,6 +75,7 @@ export default async function ProyectoDetalle({
     {key:'reuniones', label:`🎥 Reuniones${meetingBriefs.length>0?' ('+meetingBriefs.length+')':''}`},
     {key:'alertas',  label:`⚠️ Alertas${alertas.length>0?' ('+alertas.length+')':''}`},
     {key:'onboarding', label:'🚀 Onboarding'},
+    {key:'perfil', label:'📋 Perfil'},
   ]
 
   // Count messages per source
@@ -291,6 +293,19 @@ export default async function ProyectoDetalle({
             assigned={assigned as any}
           />
         </div>
+      )}
+
+      {/* Tab: Perfil Estratégico */}
+      {tab==='perfil' && (
+        <ProjectStrategicProfile
+          projectId={id}
+          initialData={{
+            maturity_stage: proyecto.maturity_stage ?? null,
+            business_objectives: proyecto.business_objectives ?? null,
+            org_challenges: proyecto.org_challenges ?? null,
+            modernization_approach: proyecto.modernization_approach ?? null,
+          }}
+        />
       )}
     </div>
   )
