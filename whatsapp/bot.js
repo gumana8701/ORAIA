@@ -27,18 +27,22 @@ const OWN_NUMBER   = '50378888120'   // your WA number — skip self-messages
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY)
 
-// ── Grupos privados — NUNCA processar, NUNCA crear proyecto ──────────────────
+// ── Grupos privados — NUNCA procesar, NUNCA crear proyecto ────────────────────
+// ⚠️  PERMANENTE: estos grupos son personales y NUNCA deben aparecer en ORAIA
 const PRIVATE_GROUPS = [
-  'niña maitra\'s beer&grill',
-  'niña maitra\'s beer & grill',
-  'niña maitra beer grill',
+  'niña maitra',
+  'maitra',
+  'beer&grill',
+  'beer & grill',
   'familia 2.0',
-  '2nd grade a',
+  'familia2.0',
+  '2nd grade',
   '5th b',
+  '5th grade',
 ]
 function isPrivateGroup(name = '') {
   const n = name.toLowerCase().trim()
-  return PRIVATE_GROUPS.some(pg => n.includes(pg) || pg.includes(n))
+  return PRIVATE_GROUPS.some(pg => n.includes(pg))
 }
 
 // ── Team detection ─────────────────────────────────────────────────────────────
