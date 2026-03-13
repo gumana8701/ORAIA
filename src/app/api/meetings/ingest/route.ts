@@ -1,23 +1,29 @@
 /**
  * POST /api/meetings/ingest
  *
- * Recibe transcripts de Google Meet via n8n, los procesa con Gemini AI,
- * y los almacena en la tabla `meeting_briefs` de Supabase.
+ * Ingesta completa de transcripts de Google Meet via n8n.
+ * Pipeline:
+ *   1. Gemini analiza el transcript
+ *   2. Guarda meeting_brief (summary, decisions, action_items, participants)
+ *   3. Upserta KPIs extraídos en project_kpis
+ *   4. Crea alertas si hay riesgos detectados
+ *   5. Registra actividad en messages (fuente: google_meet)
+ *   6. Actualiza ultimo_mensaje + ultima_actividad en projects
  *
- * Headers requeridos:
+ * Headers:
  *   x-webhook-secret: <MEETINGS_WEBHOOK_SECRET>
  *
- * Body (JSON):
+ * Body:
  * {
- *   title: string,               // Título de la reunión
- *   meeting_date: string,         // ISO 8601 (ej: "2026-03-13T14:00:00Z")
- *   transcript: string,           // Texto completo del transcript
- *   project_id?: string,          // UUID del proyecto en Supabase (opcional)
- *   project_name?: string,        // Nombre del proyecto para matching (opcional)
- *   participants?: string[],       // Lista de participantes (opcional, Gemini puede extraerlos)
- *   drive_link?: string,          // Link al documento en Drive (opcional)
- *   duration_minutes?: number,    // Duración en minutos (opcional)
- *   source?: string               // "google_meet" | "zoom" | etc (default: "google_meet")
+ *   title: string,
+ *   meeting_date: string,       // ISO 8601
+ *   transcript: string,
+ *   project_id?: string,        // UUID (opcional, se busca por project_name si no viene)
+ *   project_name?: string,      // Para auto-match
+ *   participants?: string[],
+ *   drive_link?: string,
+ *   duration_minutes?: number,
+ *   source?: string             // default: "google_meet"
  * }
  */
 
@@ -26,6 +32,8 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface IngestPayload {
   title: string
@@ -44,9 +52,16 @@ interface GeminiAnalysis {
   decisions: string[]
   action_items: string[]
   participants: string[]
-  project_match?: string
   ai_confidence: number
+  // Project management enrichment
+  kpis: Array<{ kpi_text: string; categoria: string; meta: string }>
+  alerts: Array<{ tipo: string; descripcion: string; nivel: string }>
+  progreso?: number          // 0-100 si se menciona avance
+  estado?: string            // activo | en_riesgo | pausado | completado
+  proyecto_detectado?: string // Si el transcript menciona el nombre del proyecto
 }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function supabase() {
   return createClient(
@@ -58,18 +73,17 @@ function supabase() {
 async function analyzeWithGemini(payload: IngestPayload): Promise<GeminiAnalysis> {
   const GEMINI_KEY = process.env.GEMINI_API_KEY || 'AIzaSyCXasYSgKTdLX5mZLR0jFntO7HB0CUmWOw'
 
-  // Trim transcript to avoid token limits (Gemini 1.5 Flash handles ~100k tokens)
+  // Trim transcript to avoid token limits
   const transcriptSnippet = payload.transcript.slice(0, 80000)
 
   const participantsHint = payload.participants?.length
     ? `\nParticipantes conocidos: ${payload.participants.join(', ')}`
     : ''
-
   const projectHint = payload.project_name
-    ? `\nEste meeting es del proyecto: "${payload.project_name}"`
+    ? `\nProyecto: "${payload.project_name}"`
     : ''
 
-  const prompt = `Eres un analista de proyectos. Analiza el siguiente transcript de una reunión de Google Meet y extrae la información estructurada en JSON.
+  const prompt = `Eres un analista senior de project management. Analiza el transcript de esta reunión de Google Meet y extrae TODA la información estructurada.
 
 Reunión: "${payload.title}"
 Fecha: ${payload.meeting_date}${projectHint}${participantsHint}
@@ -77,21 +91,42 @@ Fecha: ${payload.meeting_date}${projectHint}${participantsHint}
 TRANSCRIPT:
 ${transcriptSnippet}
 
-Responde ÚNICAMENTE con un JSON válido con esta estructura exacta (sin markdown, sin \`\`\`):
+Responde ÚNICAMENTE con un JSON válido (sin markdown, sin \`\`\`, sin texto extra):
 {
   "summary": "Resumen ejecutivo de 3-5 oraciones en español. Qué se discutió, estado del proyecto, decisiones clave.",
-  "decisions": ["Decisión 1", "Decisión 2"],
-  "action_items": ["Tarea pendiente 1 (responsable: nombre)", "Tarea pendiente 2"],
+  "decisions": ["Decisión tomada 1", "Decisión tomada 2"],
+  "action_items": ["Tarea pendiente 1 (responsable: nombre si se menciona)", "Tarea 2"],
   "participants": ["Nombre 1", "Nombre 2"],
-  "ai_confidence": 0.95
+  "ai_confidence": 0.95,
+  "kpis": [
+    {
+      "kpi_text": "Descripción corta del KPI o meta mencionada en la reunión",
+      "categoria": "una de: entrega | calidad | comunicacion | financiero | tecnico | cliente | otro",
+      "meta": "Valor o descripción de la meta si se menciona, ej: '2 semanas', '$5000', 'antes del viernes'"
+    }
+  ],
+  "alerts": [
+    {
+      "tipo": "uno de: cancelacion | reembolso | enojo | pago | entrega | urgente | silencio | otro",
+      "descripcion": "Descripción clara del riesgo o problema identificado",
+      "nivel": "uno de: bajo | medio | alto | critico"
+    }
+  ],
+  "progreso": 65,
+  "estado": "activo",
+  "proyecto_detectado": "Nombre del proyecto si se menciona explícitamente en el transcript"
 }
 
-Reglas:
-- summary: siempre en español, directo y ejecutivo
-- decisions: solo lo que se decidió formalmente (vacío [] si no hay nada)
+Reglas importantes:
+- summary: español, directo, útil para un manager
+- decisions: solo lo que se DECIDIÓ formalmente (puede ser [] si no hay)
 - action_items: tareas concretas con responsable si se menciona
-- participants: extrae nombres reales del transcript
-- ai_confidence: entre 0.0 y 1.0 según la calidad del transcript`
+- kpis: extrae CUALQUIER métrica, objetivo, entregable, o meta mencionada (puede ser [] si no hay)
+- alerts: detecta problemas, riesgos, quejas, retrasos, cancelaciones (puede ser [] si no hay)
+- progreso: número 0-100 SOLO si el transcript menciona % de avance explícitamente, si no → null
+- estado: SOLO si hay señales claras (cancelación → en_riesgo, completado → completado), si no → null
+- proyecto_detectado: null si no se menciona nombre de proyecto
+- ai_confidence: 0.0-1.0 según calidad y completitud del transcript`
 
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
@@ -100,142 +135,215 @@ Reglas:
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: 1024,
-        },
+        generationConfig: { temperature: 0.15, maxOutputTokens: 2048 },
       }),
     }
   )
 
-  if (!res.ok) {
-    const err = await res.text()
-    throw new Error(`Gemini error ${res.status}: ${err.slice(0, 200)}`)
-  }
+  if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text().then(t => t.slice(0, 200))}`)
 
   const data = await res.json()
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
-
-  // Strip markdown code fences if present
   const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
 
   try {
     const parsed = JSON.parse(cleaned)
     return {
-      summary: parsed.summary ?? '',
-      decisions: Array.isArray(parsed.decisions) ? parsed.decisions : [],
-      action_items: Array.isArray(parsed.action_items) ? parsed.action_items : [],
-      participants: Array.isArray(parsed.participants) ? parsed.participants : (payload.participants ?? []),
-      ai_confidence: typeof parsed.ai_confidence === 'number' ? parsed.ai_confidence : 0.8,
+      summary:             parsed.summary             ?? '',
+      decisions:           Array.isArray(parsed.decisions)   ? parsed.decisions   : [],
+      action_items:        Array.isArray(parsed.action_items) ? parsed.action_items : [],
+      participants:        Array.isArray(parsed.participants) ? parsed.participants : (payload.participants ?? []),
+      ai_confidence:       typeof parsed.ai_confidence === 'number' ? parsed.ai_confidence : 0.8,
+      kpis:                Array.isArray(parsed.kpis)    ? parsed.kpis    : [],
+      alerts:              Array.isArray(parsed.alerts)  ? parsed.alerts  : [],
+      progreso:            typeof parsed.progreso === 'number' ? parsed.progreso : undefined,
+      estado:              parsed.estado              ?? undefined,
+      proyecto_detectado:  parsed.proyecto_detectado  ?? undefined,
     }
   } catch {
-    // Fallback: return raw text as summary
     return {
       summary: text.slice(0, 500),
-      decisions: [],
-      action_items: [],
+      decisions: [], action_items: [],
       participants: payload.participants ?? [],
       ai_confidence: 0.3,
+      kpis: [], alerts: [],
     }
   }
 }
 
-async function findProjectByName(name: string): Promise<string | null> {
-  if (!name) return null
+async function resolveProjectId(payload: IngestPayload, proyecto_detectado?: string): Promise<string | null> {
+  if (payload.project_id) return payload.project_id
+
   const sb = supabase()
+  const searchName = payload.project_name || proyecto_detectado
+  if (!searchName) return null
+
   const { data } = await sb
     .from('projects')
-    .select('id, nombre')
-    .ilike('nombre', `%${name}%`)
+    .select('id')
+    .ilike('nombre', `%${searchName}%`)
     .limit(1)
     .single()
+
   return data?.id ?? null
 }
 
+// ─── Main handler ─────────────────────────────────────────────────────────────
+
 export async function POST(req: NextRequest) {
-  // ── Auth ──────────────────────────────────────────────────────────────────
+  // Auth
   const secret = req.headers.get('x-webhook-secret')
   const expectedSecret = process.env.MEETINGS_WEBHOOK_SECRET
-
   if (expectedSecret && secret !== expectedSecret) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // ── Parse body ────────────────────────────────────────────────────────────
+  // Parse
   let payload: IngestPayload
-  try {
-    payload = await req.json()
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-  }
+  try { payload = await req.json() }
+  catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
 
   if (!payload.title || !payload.transcript || !payload.meeting_date) {
     return NextResponse.json(
-      { error: 'Missing required fields: title, transcript, meeting_date' },
+      { error: 'Missing: title, transcript, meeting_date' },
       { status: 400 }
     )
   }
 
-  // ── Resolve project_id ────────────────────────────────────────────────────
-  let projectId = payload.project_id ?? null
-
-  if (!projectId && payload.project_name) {
-    projectId = await findProjectByName(payload.project_name)
-  }
-
-  // ── Gemini analysis ───────────────────────────────────────────────────────
+  // ── 1. Gemini analysis ────────────────────────────────────────────────────
   let analysis: GeminiAnalysis
   try {
     analysis = await analyzeWithGemini(payload)
   } catch (err) {
     console.error('[meetings/ingest] Gemini error:', err)
-    // Fallback: store raw without AI analysis
     analysis = {
-      summary: '',
-      decisions: [],
-      action_items: [],
+      summary: '', decisions: [], action_items: [],
       participants: payload.participants ?? [],
-      ai_confidence: 0,
+      ai_confidence: 0, kpis: [], alerts: [],
     }
   }
 
-  // ── Upsert to Supabase ────────────────────────────────────────────────────
+  // ── 2. Resolve project ────────────────────────────────────────────────────
+  const projectId = await resolveProjectId(payload, analysis.proyecto_detectado)
+
   const sb = supabase()
+  const results: Record<string, unknown> = {}
 
-  const record = {
-    title: payload.title,
-    meeting_date: payload.meeting_date,
-    transcript_raw: payload.transcript,
-    drive_link: payload.drive_link ?? null,
-    source: payload.source ?? 'google_meet',
-    duration_minutes: payload.duration_minutes ?? null,
-    project_id: projectId,
-    summary: analysis.summary,
-    decisions: analysis.decisions,
-    action_items: analysis.action_items,
-    participants: analysis.participants,
-    ai_confidence: analysis.ai_confidence,
-  }
-
-  const { data, error } = await sb
+  // ── 3. Insert meeting_brief ───────────────────────────────────────────────
+  const { data: brief, error: briefErr } = await sb
     .from('meeting_briefs')
-    .insert(record)
+    .insert({
+      title:            payload.title,
+      meeting_date:     payload.meeting_date,
+      transcript_raw:   payload.transcript,
+      drive_link:       payload.drive_link   ?? null,
+      source:           payload.source       ?? 'google_meet',
+      duration_minutes: payload.duration_minutes ?? null,
+      project_id:       projectId,
+      summary:          analysis.summary,
+      decisions:        analysis.decisions,
+      action_items:     analysis.action_items,
+      participants:     analysis.participants,
+      ai_confidence:    analysis.ai_confidence,
+    })
     .select('id')
     .single()
 
-  if (error) {
-    console.error('[meetings/ingest] Supabase error:', error)
-    return NextResponse.json(
-      { error: 'Database insert failed', detail: error.message },
-      { status: 500 }
-    )
+  if (briefErr) {
+    console.error('[meetings/ingest] brief insert error:', briefErr)
+    return NextResponse.json({ error: 'brief insert failed', detail: briefErr.message }, { status: 500 })
   }
 
+  results.brief_id = brief.id
+
+  // ── 4. Upsert KPIs ────────────────────────────────────────────────────────
+  if (projectId && analysis.kpis.length > 0) {
+    const kpiRows = analysis.kpis.map(k => ({
+      project_id:      projectId,
+      source_brief_id: brief.id,
+      kpi_text:        k.kpi_text,
+      categoria:       k.categoria,
+      meta:            k.meta,
+      confirmado:      false,
+    }))
+
+    const { error: kpiErr } = await sb.from('project_kpis').insert(kpiRows)
+    if (kpiErr) console.error('[meetings/ingest] kpi insert error:', kpiErr)
+    results.kpis_inserted = kpiErr ? 0 : kpiRows.length
+  }
+
+  // ── 5. Insert alerts ──────────────────────────────────────────────────────
+  if (projectId && analysis.alerts.length > 0) {
+    const alertRows = analysis.alerts.map(a => ({
+      project_id:  projectId,
+      tipo:        a.tipo,
+      descripcion: a.descripcion,
+      nivel:       a.nivel,
+      resuelta:    false,
+    }))
+
+    const { error: alertErr } = await sb.from('alerts').insert(alertRows)
+    if (alertErr) console.error('[meetings/ingest] alert insert error:', alertErr)
+    results.alerts_created = alertErr ? 0 : alertRows.length
+  }
+
+  // ── 6. Log as message (Activity Feed) ────────────────────────────────────
+  if (projectId) {
+    const msgContent = `🎥 Reunión: ${payload.title}\n\n${analysis.summary}${
+      analysis.action_items.length > 0
+        ? '\n\n📌 Pendientes:\n' + analysis.action_items.map(a => `• ${a}`).join('\n')
+        : ''
+    }`
+
+    await sb.from('messages').insert({
+      project_id:    projectId,
+      fuente:        'google_meet',
+      sender:        'Google Meet',
+      contenido:     msgContent,
+      timestamp:     payload.meeting_date,
+      es_del_cliente: false,
+      metadata: {
+        brief_id:   brief.id,
+        drive_link: payload.drive_link ?? null,
+        participants: analysis.participants,
+        decisions_count: analysis.decisions.length,
+        action_items_count: analysis.action_items.length,
+      },
+    })
+    results.message_logged = true
+  }
+
+  // ── 7. Update project: last activity + optional status/progress ───────────
+  if (projectId) {
+    const updatePayload: Record<string, unknown> = {
+      ultima_actividad: payload.meeting_date,
+      ultimo_mensaje:   analysis.summary.slice(0, 200) || `Reunión: ${payload.title}`,
+    }
+
+    if (analysis.progreso !== undefined) updatePayload.progreso = analysis.progreso
+    if (analysis.estado)                 updatePayload.estado   = analysis.estado
+
+    const { error: projErr } = await sb
+      .from('projects')
+      .update(updatePayload)
+      .eq('id', projectId)
+
+    if (projErr) console.error('[meetings/ingest] project update error:', projErr)
+    results.project_updated = !projErr
+  }
+
+  // ── Response ──────────────────────────────────────────────────────────────
   return NextResponse.json({
-    ok: true,
-    id: data.id,
-    project_id: projectId,
-    ai_confidence: analysis.ai_confidence,
-    summary_preview: analysis.summary.slice(0, 120),
+    ok:             true,
+    brief_id:       brief.id,
+    project_id:     projectId,
+    ai_confidence:  analysis.ai_confidence,
+    summary_preview: analysis.summary.slice(0, 150),
+    stats: {
+      kpis_inserted:    results.kpis_inserted    ?? 0,
+      alerts_created:   results.alerts_created   ?? 0,
+      message_logged:   results.message_logged   ?? false,
+      project_updated:  results.project_updated  ?? false,
+    },
   })
 }
