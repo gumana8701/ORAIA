@@ -61,6 +61,59 @@ interface GeminiAnalysis {
   proyecto_detectado?: string // Si el transcript menciona el nombre del proyecto
 }
 
+// ─── Slack notification ───────────────────────────────────────────────────────
+
+async function notifySlack(analysis: GeminiAnalysis, payload: IngestPayload, projectId: string | null, briefId: string, stats: Record<string, unknown>) {
+  const SLACK_TOKEN = process.env.SLACK_BOT_TOKEN
+  const DM_CHANNEL  = process.env.SLACK_ALERT_DM
+
+  if (!SLACK_TOKEN || !DM_CHANNEL) return // env vars not set yet
+
+  const alertEmoji  = (analysis.alerts.length > 0)
+    ? analysis.alerts.some(a => a.nivel === 'critico' || a.nivel === 'alto') ? '🔴' : '🟡'
+    : '🟢'
+
+  const lines: string[] = [
+    `${alertEmoji} *Nuevo transcript procesado*`,
+    `📋 *${payload.title}*`,
+    `🗓️ ${new Date(payload.meeting_date).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })}`,
+  ]
+
+  if (projectId) lines.push(`🔗 project_id: \`${projectId}\``)
+
+  if (analysis.summary) lines.push(`\n📝 ${analysis.summary.slice(0, 280)}`)
+
+  if (analysis.decisions.length > 0) {
+    lines.push(`\n✅ *Decisiones (${analysis.decisions.length}):*`)
+    analysis.decisions.slice(0, 3).forEach(d => lines.push(`  • ${d}`))
+  }
+
+  if (analysis.action_items.length > 0) {
+    lines.push(`\n🎯 *Pendientes (${analysis.action_items.length}):*`)
+    analysis.action_items.slice(0, 3).forEach(a => lines.push(`  • ${a}`))
+  }
+
+  if (analysis.alerts.length > 0) {
+    lines.push(`\n⚠️ *Alertas generadas (${analysis.alerts.length}):*`)
+    analysis.alerts.forEach(a => {
+      const icon = a.nivel === 'critico' ? '🔴' : a.nivel === 'alto' ? '🟠' : a.nivel === 'medio' ? '🟡' : '⚪'
+      lines.push(`  ${icon} [${a.tipo.toUpperCase()}] ${a.descripcion}`)
+    })
+  }
+
+  if ((stats.kpis_inserted as number) > 0) {
+    lines.push(`\n📊 ${stats.kpis_inserted} KPI(s) extraídos → pendientes de confirmar en la webapp`)
+  }
+
+  lines.push(`\n_brief_id: ${briefId}_`)
+
+  await fetch('https://slack.com/api/chat.postMessage', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${SLACK_TOKEN}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ channel: DM_CHANNEL, text: lines.join('\n') }),
+  }).catch(err => console.error('[meetings/ingest] Slack notify error:', err))
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function supabase() {
@@ -331,6 +384,9 @@ export async function POST(req: NextRequest) {
     if (projErr) console.error('[meetings/ingest] project update error:', projErr)
     results.project_updated = !projErr
   }
+
+  // ── 8. Slack DM notification ──────────────────────────────────────────────
+  await notifySlack(analysis, payload, projectId, brief.id, results)
 
   // ── Response ──────────────────────────────────────────────────────────────
   return NextResponse.json({
