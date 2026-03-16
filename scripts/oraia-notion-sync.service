@@ -1,0 +1,9 @@
+[Unit]
+Description=ORAIA Notion Sync — syncs Notion Tracker to Supabase
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/node/.openclaw/workspace/ORAIA
+ExecStart=/usr/bin/node /home/node/.openclaw/workspace/ORAIA/scripts/notion-sync.js
+StandardOutput=journal
+StandardError=journal

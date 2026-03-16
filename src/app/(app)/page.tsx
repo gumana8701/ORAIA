@@ -25,17 +25,23 @@ async function getData() {
       : projQuery.eq('id', '00000000-0000-0000-0000-000000000000') // empty result
   }
 
-  const [projRes, msgRes, pdRes, devRes] = await Promise.all([
+  const [projRes, msgRes, pdRes, devRes, notionRes] = await Promise.all([
     projQuery,
     supabase.from('messages').select('*', { count: 'exact', head: true }).gte('timestamp', new Date().toISOString().slice(0, 10)),
     supabase.from('project_developers').select('project_id, developer:developers(id,nombre,emoji,color,es_supervisor)'),
     supabase.from('developers').select('*').eq('activo', true).order('nombre'),
+    supabase.from('notion_projects').select('project_id,etapas').not('project_id', 'is', null),
   ])
 
   const devsByProject: Record<string, any[]> = {}
   for (const row of pdRes.data ?? []) {
     if (!devsByProject[row.project_id]) devsByProject[row.project_id] = []
     if (row.developer) devsByProject[row.project_id].push(row.developer)
+  }
+
+  const notionByProject: Record<string, string[]> = {}
+  for (const row of notionRes.data ?? []) {
+    if (row.project_id && row.etapas) notionByProject[row.project_id] = row.etapas
   }
 
   // Add "Sin asignar" sentinel for the picker
@@ -48,6 +54,7 @@ async function getData() {
     proyectos: (projRes.data ?? []) as Proyecto[],
     mensajesHoy: msgRes.count ?? 0,
     devsByProject,
+    notionByProject,
     allDevs,
     profile,
   }
@@ -66,7 +73,7 @@ export default async function Dashboard({
 }: {
   searchParams: Promise<{ q?: string; status?: string; color?: string; dev?: string }>
 }) {
-  const { proyectos, mensajesHoy, devsByProject, allDevs, profile } = await getData()
+  const { proyectos, mensajesHoy, devsByProject, notionByProject, allDevs, profile } = await getData()
   const { q = '', status = '', color = '', dev = '' } = await searchParams
 
   let filtered = proyectos
@@ -186,7 +193,7 @@ export default async function Dashboard({
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '14px' }}>
             {enRiesgoFiltered.map(p => (
-              <ProjectCard key={p.id} proyecto={p} developers={devsByProject[p.id] ?? []} allDevs={allDevs} />
+              <ProjectCard key={p.id} proyecto={p} developers={devsByProject[p.id] ?? []} allDevs={allDevs} notionEtapas={notionByProject[p.id]} />
             ))}
           </div>
         </div>
@@ -227,7 +234,7 @@ export default async function Dashboard({
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '14px' }}>
             {(status === 'en_riesgo' ? enRiesgoFiltered : restoFiltered).map(p => (
-              <ProjectCard key={p.id} proyecto={p} developers={devsByProject[p.id] ?? []} allDevs={allDevs} />
+              <ProjectCard key={p.id} proyecto={p} developers={devsByProject[p.id] ?? []} allDevs={allDevs} notionEtapas={notionByProject[p.id]} />
             ))}
           </div>
         )}

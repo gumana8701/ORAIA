@@ -157,10 +157,12 @@ export default function ProjectCard({
   proyecto,
   developers = [],
   allDevs = [],
+  notionEtapas,
 }: {
   proyecto: Proyecto
   developers?: any[]
   allDevs?: any[]
+  notionEtapas?: string[]
 }) {
   const router = useRouter()
   const [localDevs, setLocalDevs] = useState(developers)
@@ -252,6 +254,14 @@ export default function ProjectCard({
                   background: 'rgba(245,158,11,0.12)', color: '#fbbf24',
                   border: '1px solid rgba(245,158,11,0.22)', fontWeight: 600,
                 }}>⚠ {proyecto.alertas_count}</span>
+              )}
+              {notionEtapas && notionEtapas.length > 0 && (
+                <span style={{
+                  fontSize: '10px', padding: '2px 6px', borderRadius: '4px',
+                  background: 'rgba(232,121,47,0.10)', color: '#E8792F',
+                  border: '1px solid rgba(232,121,47,0.22)', fontWeight: 600,
+                  maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>📋 {notionEtapas[0]}</span>
               )}
             </div>
           </div>
