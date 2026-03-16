@@ -7,6 +7,7 @@ import DeveloperAssignerWrapper from './DeveloperAssignerWrapper'
 import ActivityFeed from '@/components/ActivityFeed'
 import ProjectKPIs from '@/components/ProjectKPIs'
 import ProjectKPIsEditor from '@/components/ProjectKPIsEditor'
+import NotionTasksTab from '@/components/NotionTasksTab'
 
 const nivelColor: Record<string, string> = {
   critico: '#ef4444', alto: '#f97316', medio: '#f59e0b', bajo: '#6b7280',
@@ -28,7 +29,7 @@ function timeAgo(iso: string): string {
 
 async function getData(id: string) {
   const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
-  const [projRes, msgRes, alertRes, devsRes, assignedRes, briefsRes, kpisRes] = await Promise.all([
+  const [projRes, msgRes, alertRes, devsRes, assignedRes, briefsRes, kpisRes, notionRes] = await Promise.all([
     sb.from('projects').select('*').eq('id', id).single(),
     sb.from('messages').select('*').eq('project_id', id).order('timestamp',{ascending:false}).limit(100),
     sb.from('alerts').select('*').eq('project_id', id).eq('resuelta',false).order('created_at',{ascending:false}),
@@ -36,6 +37,7 @@ async function getData(id: string) {
     sb.from('project_developers').select('*, developer:developers(*)').eq('project_id', id),
     sb.from('meeting_briefs').select('id,title,meeting_date,drive_link,summary,decisions,action_items,participants,ai_confidence').eq('project_id', id).order('meeting_date',{ascending:false}).limit(50),
     sb.from('project_kpis').select('id,kpi_text,categoria,meta,confirmado').eq('project_id', id).order('created_at',{ascending:true}),
+    sb.from('notion_projects').select('id,etapas').eq('project_id', id).limit(1).maybeSingle(),
   ])
   return {
     proyecto: projRes.data as Proyecto | null,
@@ -45,6 +47,7 @@ async function getData(id: string) {
     assigned: (assignedRes.data ?? []) as (ProjectDeveloper & { developer: Developer })[],
     meetingBriefs: (briefsRes.data ?? []) as any[],
     kpis: (kpisRes.data ?? []) as any[],
+    notionProject: notionRes.data as { id: string; etapas: string[] } | null,
   }
 }
 
@@ -56,13 +59,14 @@ export default async function ProyectoDetalle({
 }) {
   const {id} = await params
   const {tab='mensajes', fuente: fuenteFilter} = await searchParams
-  const {proyecto, mensajes, alertas, allDevelopers, assigned, meetingBriefs, kpis} = await getData(id)
+  const {proyecto, mensajes, alertas, allDevelopers, assigned, meetingBriefs, kpis, notionProject} = await getData(id)
   if (!proyecto) notFound()
 
   const totalActivity = mensajes.length + meetingBriefs.length
   const tabs = [
     {key:'actividad',  label:`📋 Actividad${totalActivity>0?' ('+totalActivity+')':''}`},
     {key:'alertas',    label:`⚠️ Alertas${alertas.length>0?' ('+alertas.length+')':''}`},
+    {key:'notion',     label:'📋 Notion'},
     {key:'onboarding', label:'🚀 Onboarding'},
     {key:'perfil',     label:'🎯 KPIs'},
   ]
@@ -169,6 +173,11 @@ export default async function ProyectoDetalle({
             </div>
           ))}
         </div>
+      )}
+
+      {/* Tab: Notion */}
+      {activeTab==='notion' && (
+        <NotionTasksTab projectId={id} />
       )}
 
       {/* Tab: Onboarding / Developer Assignment */}
