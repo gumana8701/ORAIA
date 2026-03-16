@@ -99,7 +99,7 @@ function fmtDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/El_Salvador' })
 }
 
-// ── Etapa selector dropdown ────────────────────────────────────────────────────
+// ── Etapa selector dropdown (single select) ───────────────────────────────────
 function EtapaSelector({
   notionProjectId, currentEtapas, onSaved
 }: {
@@ -108,9 +108,9 @@ function EtapaSelector({
   onSaved: (newEtapas: string[]) => void
 }) {
   const [open, setOpen] = useState(false)
-  const [selected, setSelected] = useState<string[]>(currentEtapas)
   const [saving, setSaving] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const current = currentEtapas[0] || null
 
   useEffect(() => {
     const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
@@ -118,80 +118,68 @@ function EtapaSelector({
     return () => document.removeEventListener('mousedown', h)
   }, [])
 
-  const toggle = (etapa: string) => {
-    setSelected(prev => prev.includes(etapa) ? prev.filter(e => e !== etapa) : [...prev, etapa])
-  }
-
-  const save = async () => {
+  const select = async (etapa: string) => {
+    if (saving) return
     setSaving(true)
     try {
       await fetch('/api/notion/update-status', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notion_project_id: notionProjectId, etapas: selected })
+        body: JSON.stringify({ notion_project_id: notionProjectId, etapas: [etapa] })
       })
-      onSaved(selected)
+      onSaved([etapa])
       setOpen(false)
     } finally {
       setSaving(false)
     }
   }
 
-  const c = selected.length > 0 ? (ETAPA_COLORS[selected[0]] || DEFAULT_ETAPA_COLOR) : DEFAULT_ETAPA_COLOR
+  const c = current ? (ETAPA_COLORS[current] || DEFAULT_ETAPA_COLOR) : { bg: 'rgba(255,255,255,0.06)', text: '#6b7280', border: 'rgba(255,255,255,0.12)' }
 
   return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+    <div ref={ref} style={{ position: 'relative' }}>
       <button onClick={() => setOpen(!open)} style={{
-        display: 'flex', alignItems: 'center', gap: '6px',
+        display: 'flex', alignItems: 'center', gap: '8px',
         background: c.bg, border: `1px solid ${c.border}`, borderRadius: '8px',
-        padding: '5px 10px', cursor: 'pointer', color: c.text, fontSize: '12px', fontWeight: 600,
+        padding: '7px 12px', cursor: 'pointer', color: c.text, fontSize: '13px', fontWeight: 600,
+        maxWidth: '280px', textAlign: 'left',
       }}>
-        {selected.length > 0 ? selected.map(e => e.split(' ')[0]).join(' ') || selected[0] : '+ Etapa'}
-        <span style={{ fontSize: '10px', opacity: 0.7 }}>▼</span>
+        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {saving ? 'Guardando...' : (current || 'Sin etapa')}
+        </span>
+        <span style={{ fontSize: '10px', opacity: 0.6, flexShrink: 0 }}>▼</span>
       </button>
 
       {open && (
         <div style={{
-          position: 'absolute', top: '100%', left: 0, zIndex: 100, minWidth: '260px',
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 100, width: '280px',
           background: '#1a2035', border: '1px solid rgba(255,255,255,0.12)',
-          borderRadius: '10px', padding: '8px', marginTop: '4px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+          borderRadius: '10px', padding: '6px', boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
         }}>
-          <div style={{ fontSize: '10px', color: '#4a5568', padding: '2px 6px 6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Selecciona etapa(s)
+          <div style={{ fontSize: '10px', color: '#4a5568', padding: '2px 8px 6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Etapa de implementación
           </div>
-          <div style={{ maxHeight: '240px', overflowY: 'auto' }}>
+          <div style={{ maxHeight: '280px', overflowY: 'auto' }}>
             {ALL_ETAPAS.map(etapa => {
-              const isActive = selected.includes(etapa)
+              const isActive = etapa === current
               const ec = ETAPA_COLORS[etapa] || DEFAULT_ETAPA_COLOR
               return (
-                <div key={etapa} onClick={() => toggle(etapa)} style={{
-                  padding: '6px 8px', borderRadius: '6px', cursor: 'pointer',
+                <div key={etapa} onClick={() => select(etapa)} style={{
+                  padding: '8px 10px', borderRadius: '6px', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', gap: '8px',
                   background: isActive ? ec.bg : 'transparent',
-                  marginBottom: '2px',
+                  marginBottom: '1px', transition: 'background 0.1s',
                 }}>
                   <span style={{
-                    width: '14px', height: '14px', borderRadius: '3px', flexShrink: 0,
-                    border: `1px solid ${isActive ? ec.text : 'rgba(255,255,255,0.2)'}`,
-                    background: isActive ? ec.text : 'transparent',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '9px', color: '#fff',
-                  }}>{isActive ? '✓' : ''}</span>
-                  <span style={{ fontSize: '12px', color: isActive ? ec.text : '#A0AEC0' }}>{etapa}</span>
+                    width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
+                    background: isActive ? ec.text : 'rgba(255,255,255,0.15)',
+                  }}/>
+                  <span style={{ fontSize: '13px', color: isActive ? ec.text : '#A0AEC0', fontWeight: isActive ? 600 : 400 }}>
+                    {etapa}
+                  </span>
                 </div>
               )
             })}
-          </div>
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '8px', marginTop: '4px', display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-            <button onClick={() => setOpen(false)} style={{
-              fontSize: '11px', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer',
-              background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: '#A0AEC0',
-            }}>Cancelar</button>
-            <button onClick={save} disabled={saving} style={{
-              fontSize: '11px', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer',
-              background: '#E8792F', border: 'none', color: '#fff', fontWeight: 700,
-            }}>{saving ? '...' : 'Guardar'}</button>
           </div>
         </div>
       )}
@@ -352,14 +340,11 @@ export default function NotionTasksTab({ projectId }: { projectId: string }) {
           <span style={{ fontSize: '11px', color: '#4a5568', display: 'block', marginBottom: '6px' }}>
             Etapa de implementación
           </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            <EtapaSelector
-              notionProjectId={notionProject.id}
-              currentEtapas={notionProject.etapas || []}
-              onSaved={(newEtapas) => setNotionProject(prev => prev ? { ...prev, etapas: newEtapas } : prev)}
-            />
-            {notionProject.etapas?.slice(1).map(e => <EtapaBadge key={e} etapa={e} />)}
-          </div>
+          <EtapaSelector
+            notionProjectId={notionProject.id}
+            currentEtapas={notionProject.etapas || []}
+            onSaved={(newEtapas) => setNotionProject(prev => prev ? { ...prev, etapas: newEtapas } : prev)}
+          />
         </div>
 
         {/* Grid de metadata */}
