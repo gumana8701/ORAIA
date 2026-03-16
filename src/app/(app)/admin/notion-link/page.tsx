@@ -16,9 +16,10 @@ async function getData() {
   if (!['admin', 'supervisor'].includes(profile?.rol)) redirect('/')
 
   const [notionRes, projectsRes] = await Promise.all([
-    // All notion projects, ordered: unlinked first, then by etapa
+    // Only DFY projects (+ Partnership + Prueba de concepto), ordered by nombre
     admin.from('notion_projects')
       .select('id, nombre, etapas, estado, project_id, whatsapp_group_id, plan_type, lanzamiento_real')
+      .in('plan_type', ['DFY', 'Partnership', 'Prueba de concepto'])
       .order('nombre', { ascending: true }),
     // All supabase projects
     admin.from('projects')

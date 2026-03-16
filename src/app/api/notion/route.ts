@@ -18,10 +18,10 @@ export async function GET(req: NextRequest) {
     // Get notion project
     let notionProject = null
     if (projectId) {
-      const { data } = await sb.from('notion_projects').select('*').eq('project_id', projectId).limit(1).single()
+      const { data } = await sb.from('notion_projects').select('*').eq('project_id', projectId).in('plan_type', ['DFY', 'Partnership', 'Prueba de concepto']).limit(1).maybeSingle()
       notionProject = data
     } else if (notionId) {
-      const { data } = await sb.from('notion_projects').select('*').eq('id', notionId).limit(1).single()
+      const { data } = await sb.from('notion_projects').select('*').eq('id', notionId).limit(1).maybeSingle()
       notionProject = data
     }
 

@@ -30,7 +30,7 @@ async function getData() {
     supabase.from('messages').select('*', { count: 'exact', head: true }).gte('timestamp', new Date().toISOString().slice(0, 10)),
     supabase.from('project_developers').select('project_id, developer:developers(id,nombre,emoji,color,es_supervisor)'),
     supabase.from('developers').select('*').eq('activo', true).order('nombre'),
-    supabase.from('notion_projects').select('project_id,etapas').not('project_id', 'is', null),
+    supabase.from('notion_projects').select('project_id,etapas').not('project_id', 'is', null).in('plan_type', ['DFY', 'Partnership', 'Prueba de concepto']),
   ])
 
   const devsByProject: Record<string, any[]> = {}

@@ -108,7 +108,7 @@ export default function NotionLinkClient({
           📋 Vincular Proyectos Notion
         </h1>
         <p style={{ fontSize: '13px', color: '#A0AEC0', margin: 0 }}>
-          Conecta cada entrada de Notion con su proyecto en la webapp. Un proyecto puede tener múltiples entradas.
+          Solo proyectos DFY · Partnership · Prueba de concepto. DIY y DWY filtrados — 116 DFY relevantes de 292 totales.
         </p>
       </div>
 
