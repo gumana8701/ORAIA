@@ -8,6 +8,7 @@ import ActivityFeed from '@/components/ActivityFeed'
 import ProjectKPIs from '@/components/ProjectKPIs'
 import ProjectKPIsEditor from '@/components/ProjectKPIsEditor'
 import NotionTasksTab from '@/components/NotionTasksTab'
+import { getSessionProfile } from '@/lib/auth'
 
 const nivelColor: Record<string, string> = {
   critico: '#ef4444', alto: '#f97316', medio: '#f59e0b', bajo: '#6b7280',
@@ -27,8 +28,21 @@ function timeAgo(iso: string): string {
   return 'ahora'
 }
 
-async function getData(id: string) {
+async function getData(id: string, profileId?: string, profileRole?: string, developerProfileId?: string | null) {
   const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+  // Build navigation project list (filtered by role)
+  let navQuery = sb.from('projects').select('id,nombre').order('ultima_actividad', { ascending: false, nullsFirst: false })
+  if (profileRole === 'developer' && developerProfileId) {
+    // Developers only see their assigned projects
+    const { data: myProjects } = await sb.from('project_developers')
+      .select('project_id')
+      .eq('developer_id', developerProfileId)
+    const myIds = (myProjects ?? []).map((r: any) => r.project_id)
+    if (myIds.length > 0) navQuery = navQuery.in('id', myIds)
+    else navQuery = navQuery.eq('id', '00000000-0000-0000-0000-000000000000')
+  }
+  const navRes = await navQuery
+
   const [projRes, msgRes, alertRes, devsRes, assignedRes, briefsRes, kpisRes, notionRes] = await Promise.all([
     sb.from('projects').select('*').eq('id', id).single(),
     sb.from('messages').select('*').eq('project_id', id).order('timestamp',{ascending:false}).limit(100),
@@ -48,6 +62,7 @@ async function getData(id: string) {
     meetingBriefs: (briefsRes.data ?? []) as any[],
     kpis: (kpisRes.data ?? []) as any[],
     notionProject: notionRes.data as { id: string; etapas: string[] } | null,
+    navProjects: (navRes.data ?? []) as { id: string; nombre: string }[],
   }
 }
 
@@ -59,8 +74,14 @@ export default async function ProyectoDetalle({
 }) {
   const {id} = await params
   const {tab='mensajes', fuente: fuenteFilter} = await searchParams
-  const {proyecto, mensajes, alertas, allDevelopers, assigned, meetingBriefs, kpis, notionProject} = await getData(id)
+  const profile = await getSessionProfile()
+  const {proyecto, mensajes, alertas, allDevelopers, assigned, meetingBriefs, kpis, notionProject, navProjects} = await getData(id, profile.id, profile.rol, profile.developer_id)
   if (!proyecto) notFound()
+
+  // Compute prev/next for navigation
+  const navIdx = navProjects.findIndex(p => p.id === id)
+  const prevProject = navIdx > 0 ? navProjects[navIdx - 1] : null
+  const nextProject = navIdx >= 0 && navIdx < navProjects.length - 1 ? navProjects[navIdx + 1] : null
 
   const totalActivity = mensajes.length + meetingBriefs.length
   const tabs = [
@@ -78,11 +99,59 @@ export default async function ProyectoDetalle({
 
   return (
     <div>
-      {/* Breadcrumb */}
-      <div style={{display:'flex',alignItems:'center',gap:'6px',fontSize:'13px',color:'#A0AEC0',marginBottom:'24px'}}>
-        <Link href="/" style={{color:'#A0AEC0',textDecoration:'none'}}>Proyectos</Link>
-        <span>/</span>
-        <span style={{color:'#fff',fontWeight:500}}>{proyecto.nombre}</span>
+      {/* Navigation bar */}
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'20px',gap:'8px'}}>
+        {/* Back button */}
+        <Link href="/" style={{textDecoration:'none'}}>
+          <div style={{
+            display:'flex',alignItems:'center',gap:'6px',fontSize:'13px',color:'#A0AEC0',
+            padding:'6px 12px',borderRadius:'8px',border:'1px solid rgba(255,255,255,0.08)',
+            background:'rgba(255,255,255,0.03)',cursor:'pointer',
+          }}>
+            ← Todos los proyectos
+          </div>
+        </Link>
+
+        {/* Prev / counter / next */}
+        <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
+          {prevProject ? (
+            <Link href={`/proyectos/${prevProject.id}?tab=${tab}`} title={prevProject.nombre} style={{textDecoration:'none'}}>
+              <div style={{
+                display:'flex',alignItems:'center',gap:'6px',fontSize:'13px',
+                padding:'6px 12px',borderRadius:'8px',border:'1px solid rgba(255,255,255,0.08)',
+                background:'rgba(255,255,255,0.03)',color:'#A0AEC0',cursor:'pointer',
+                maxWidth:'200px',overflow:'hidden',
+              }}>
+                <span>←</span>
+                <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{prevProject.nombre}</span>
+              </div>
+            </Link>
+          ) : (
+            <div style={{padding:'6px 12px',fontSize:'13px',color:'#2d3748',borderRadius:'8px',border:'1px solid transparent'}}>←</div>
+          )}
+
+          {navIdx >= 0 && (
+            <span style={{fontSize:'11px',color:'#4a5568',padding:'0 4px',whiteSpace:'nowrap'}}>
+              {navIdx + 1} / {navProjects.length}
+            </span>
+          )}
+
+          {nextProject ? (
+            <Link href={`/proyectos/${nextProject.id}?tab=${tab}`} title={nextProject.nombre} style={{textDecoration:'none'}}>
+              <div style={{
+                display:'flex',alignItems:'center',gap:'6px',fontSize:'13px',
+                padding:'6px 12px',borderRadius:'8px',
+                background:'#E8792F',color:'#fff',cursor:'pointer',fontWeight:600,
+                maxWidth:'200px',overflow:'hidden',
+              }}>
+                <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{nextProject.nombre}</span>
+                <span>→</span>
+              </div>
+            </Link>
+          ) : (
+            <div style={{padding:'6px 12px',fontSize:'13px',color:'#2d3748',borderRadius:'8px',border:'1px solid transparent'}}>→</div>
+          )}
+        </div>
       </div>
 
       {/* Header */}
