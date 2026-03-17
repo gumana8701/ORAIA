@@ -9,10 +9,13 @@ const sb = createClient(
 export async function GET() {
   const { data: notionProjects, error } = await sb
     .from('notion_projects')
-    .select('id, nombre, estado, etapas, responsable, resp_chatbot, plan_type, lanzamiento_real, kick_off_date, es_chatbot, created_time, last_edited_time, project_id')
+    .select('id, nombre, estado, etapas, responsable, resp_chatbot, plan_type, lanzamiento_real, kick_off_date, es_chatbot, project_id')
     .order('nombre')
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    console.error('pm-board query error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   const { data: taskStats } = await sb
     .from('notion_tasks')
