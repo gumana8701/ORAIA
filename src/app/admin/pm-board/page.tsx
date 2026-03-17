@@ -21,19 +21,25 @@ const ALL_ETAPAS = [
   'Falta lanzar',
 ]
 
-const ETAPA_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  '🔴 1. Incorporación': { bg: 'rgba(239,68,68,0.10)', text: '#ef4444', border: 'rgba(239,68,68,0.25)' },
-  '1.1 Listo para Ops': { bg: 'rgba(249,115,22,0.10)', text: '#f97316', border: 'rgba(249,115,22,0.25)' },
-  '🟡2. Creación del agente': { bg: 'rgba(234,179,8,0.10)', text: '#eab308', border: 'rgba(234,179,8,0.25)' },
-  '🟣3. Cliente testeando': { bg: 'rgba(168,85,247,0.10)', text: '#a855f7', border: 'rgba(168,85,247,0.25)' },
-  '3.1 Aplicando Feedback': { bg: 'rgba(168,85,247,0.08)', text: '#c084fc', border: 'rgba(168,85,247,0.20)' },
-  '3.2 Waiting Client/ Agente voz/ text': { bg: 'rgba(148,163,184,0.10)', text: '#94a3b8', border: 'rgba(148,163,184,0.20)' },
-  '🟢4. Lanzamiento': { bg: 'rgba(34,197,94,0.10)', text: '#22c55e', border: 'rgba(34,197,94,0.25)' },
-  '🔵Soporte activo': { bg: 'rgba(59,130,246,0.10)', text: '#3b82f6', border: 'rgba(59,130,246,0.25)' },
-  'On Hold': { bg: 'rgba(107,114,128,0.10)', text: '#6b7280', border: 'rgba(107,114,128,0.25)' },
-  'Termino soporte': { bg: 'rgba(107,114,128,0.08)', text: '#9ca3af', border: 'rgba(107,114,128,0.20)' },
+const ETAPA_COLORS: Record<string, { bg: string; text: string; border: string; header: string }> = {
+  '🔴 1. Incorporación':                  { bg: 'rgba(239,68,68,0.08)',  text: '#ef4444', border: 'rgba(239,68,68,0.20)',  header: 'rgba(239,68,68,0.12)' },
+  '1.1 Listo para Ops':                   { bg: 'rgba(249,115,22,0.08)', text: '#f97316', border: 'rgba(249,115,22,0.20)', header: 'rgba(249,115,22,0.12)' },
+  'por trabajar':                          { bg: 'rgba(148,163,184,0.06)',text: '#94a3b8', border: 'rgba(148,163,184,0.15)',header: 'rgba(148,163,184,0.08)' },
+  '🟡2. Creación del agente':             { bg: 'rgba(234,179,8,0.08)',  text: '#eab308', border: 'rgba(234,179,8,0.20)',  header: 'rgba(234,179,8,0.12)' },
+  '🟣3. Cliente testeando':               { bg: 'rgba(168,85,247,0.08)', text: '#a855f7', border: 'rgba(168,85,247,0.20)', header: 'rgba(168,85,247,0.12)' },
+  '3.1 Aplicando Feedback':               { bg: 'rgba(168,85,247,0.06)', text: '#c084fc', border: 'rgba(168,85,247,0.15)', header: 'rgba(168,85,247,0.10)' },
+  '3.2 Waiting Client/ Agente voz/ text': { bg: 'rgba(148,163,184,0.06)',text: '#94a3b8', border: 'rgba(148,163,184,0.15)',header: 'rgba(148,163,184,0.08)' },
+  'PORTAL pendiente':                     { bg: 'rgba(251,146,60,0.08)', text: '#fb923c', border: 'rgba(251,146,60,0.20)', header: 'rgba(251,146,60,0.12)' },
+  'Portal listo - falta entregar':        { bg: 'rgba(251,146,60,0.06)', text: '#fdba74', border: 'rgba(251,146,60,0.15)', header: 'rgba(251,146,60,0.10)' },
+  '🟢4. Lanzamiento':                     { bg: 'rgba(34,197,94,0.08)',  text: '#22c55e', border: 'rgba(34,197,94,0.20)',  header: 'rgba(34,197,94,0.12)' },
+  '6. RECIBIO PORTAL ☺':                 { bg: 'rgba(34,197,94,0.06)',  text: '#4ade80', border: 'rgba(34,197,94,0.15)',  header: 'rgba(34,197,94,0.10)' },
+  '🔵Soporte activo':                     { bg: 'rgba(59,130,246,0.08)', text: '#3b82f6', border: 'rgba(59,130,246,0.20)', header: 'rgba(59,130,246,0.12)' },
+  'Termino soporte':                      { bg: 'rgba(107,114,128,0.06)',text: '#9ca3af', border: 'rgba(107,114,128,0.15)',header: 'rgba(107,114,128,0.08)' },
+  'On Hold':                              { bg: 'rgba(107,114,128,0.08)',text: '#6b7280', border: 'rgba(107,114,128,0.20)',header: 'rgba(107,114,128,0.10)' },
+  'X. Cliente viejo y no muy contento':   { bg: 'rgba(239,68,68,0.06)',  text: '#f87171', border: 'rgba(239,68,68,0.15)',  header: 'rgba(239,68,68,0.08)' },
+  'Falta lanzar':                         { bg: 'rgba(234,179,8,0.06)',  text: '#fbbf24', border: 'rgba(234,179,8,0.15)',  header: 'rgba(234,179,8,0.10)' },
 }
-const DEFAULT_COLOR = { bg: 'rgba(232,121,47,0.10)', text: '#E8792F', border: 'rgba(232,121,47,0.25)' }
+const DEFAULT_COLOR = { bg: 'rgba(232,121,47,0.08)', text: '#E8792F', border: 'rgba(232,121,47,0.20)', header: 'rgba(232,121,47,0.10)' }
 
 interface Project {
   id: string
@@ -49,33 +55,18 @@ interface Project {
   kpis: Array<{ kpi_text: string; categoria: string }>
 }
 
-function EtapaBadge({ etapa }: { etapa: string }) {
-  const c = ETAPA_COLORS[etapa] || DEFAULT_COLOR
-  return (
-    <span
-      style={{ background: c.bg, color: c.text, border: `1px solid ${c.border}` }}
-      className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap"
-    >
-      {etapa}
-    </span>
-  )
-}
-
 function TaskBar({ total, done }: { total: number; done: number }) {
-  if (total === 0) return <span className="text-xs text-slate-500">Sin tareas</span>
+  if (total === 0) return null
   const pct = Math.round((done / total) * 100)
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 bg-slate-700 rounded-full min-w-[60px]">
+      <div className="flex-1 h-1 bg-slate-700 rounded-full">
         <div
-          className="h-1.5 rounded-full transition-all"
-          style={{
-            width: `${pct}%`,
-            background: pct === 100 ? '#22c55e' : '#E8792F',
-          }}
+          className="h-1 rounded-full transition-all"
+          style={{ width: `${pct}%`, background: pct === 100 ? '#22c55e' : '#E8792F' }}
         />
       </div>
-      <span className="text-xs text-slate-400 tabular-nums">{done}/{total}</span>
+      <span className="text-[11px] text-slate-500 tabular-nums flex-shrink-0">{done}/{total}</span>
     </div>
   )
 }
@@ -85,19 +76,51 @@ function Initials({ names }: { names: string[] }) {
   return (
     <div className="flex -space-x-1">
       {names.slice(0, 3).map((name, i) => (
-        <div
-          key={i}
-          title={name}
-          className="w-6 h-6 rounded-full bg-slate-600 border border-slate-900 flex items-center justify-center text-[10px] font-bold text-slate-200"
-        >
-          {name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+        <div key={i} title={name}
+          className="w-5 h-5 rounded-full bg-slate-600 border border-slate-900 flex items-center justify-center text-[9px] font-bold text-slate-200">
+          {name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
         </div>
       ))}
       {names.length > 3 && (
-        <div className="w-6 h-6 rounded-full bg-slate-700 border border-slate-900 flex items-center justify-center text-[10px] text-slate-400">
+        <div className="w-5 h-5 rounded-full bg-slate-700 border border-slate-900 flex items-center justify-center text-[9px] text-slate-400">
           +{names.length - 3}
         </div>
       )}
+    </div>
+  )
+}
+
+function EstadoBadge({ estado }: { estado: string | null }) {
+  if (!estado || estado === 'Sin empezar') return null
+  const isListo = estado === 'Listo'
+  const isSesion = estado.toLowerCase().includes('sesion')
+  return (
+    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+      isListo ? 'bg-green-500/15 text-green-400' :
+      isSesion ? 'bg-orange-500/15 text-orange-400' :
+      'bg-slate-700 text-slate-400'
+    }`}>
+      {isListo ? '✅ ' : isSesion ? '🔄 ' : ''}{estado}
+    </span>
+  )
+}
+
+function MoveButtons({ etapaIdx, isUpdating, onPrev, onNext }: {
+  etapaIdx: number; isUpdating: boolean
+  onPrev: () => void; onNext: () => void
+}) {
+  return (
+    <div className="flex gap-1">
+      <button onClick={onPrev} disabled={etapaIdx <= 0 || isUpdating}
+        title="Etapa anterior"
+        className="w-6 h-6 rounded bg-slate-700/80 hover:bg-slate-600 disabled:opacity-20 disabled:cursor-not-allowed flex items-center justify-center text-slate-400 text-xs transition-colors">
+        ←
+      </button>
+      <button onClick={onNext} disabled={etapaIdx >= ALL_ETAPAS.length - 1 || isUpdating}
+        title="Siguiente etapa"
+        className="w-6 h-6 rounded bg-slate-700/80 hover:bg-slate-600 disabled:opacity-20 disabled:cursor-not-allowed flex items-center justify-center text-slate-400 text-xs transition-colors">
+        →
+      </button>
     </div>
   )
 }
@@ -112,10 +135,7 @@ export default function PMBoardPage() {
   useEffect(() => {
     fetch('/api/pm-board')
       .then(r => r.json())
-      .then(data => {
-        setProjects(Array.isArray(data) ? data : [])
-        setLoading(false)
-      })
+      .then(data => { setProjects(Array.isArray(data) ? data : []); setLoading(false) })
       .catch(() => setLoading(false))
   }, [])
 
@@ -128,133 +148,98 @@ export default function PMBoardPage() {
     const currentIdx = ALL_ETAPAS.indexOf(currentEtapa)
     const newIdx = direction === 'next' ? currentIdx + 1 : currentIdx - 1
     if (newIdx < 0 || newIdx >= ALL_ETAPAS.length) return
-
     const newEtapa = ALL_ETAPAS[newIdx]
     setUpdatingId(project.id)
-
-    // Optimistic update
-    setProjects(prev => prev.map(p =>
-      p.id === project.id ? { ...p, etapas: [newEtapa] } : p
-    ))
-
+    setProjects(prev => prev.map(p => p.id === project.id ? { ...p, etapas: [newEtapa] } : p))
     try {
-      const res = await fetch('/api/notion/update-status', {
+      await fetch('/api/notion/update-status', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notion_project_id: project.id, etapas: [newEtapa] }),
       })
-      if (!res.ok) throw new Error('Update failed')
     } catch {
-      // Revert on error
-      setProjects(prev => prev.map(p =>
-        p.id === project.id ? { ...p, etapas: project.etapas } : p
-      ))
+      setProjects(prev => prev.map(p => p.id === project.id ? { ...p, etapas: project.etapas } : p))
     } finally {
       setUpdatingId(null)
     }
   }, [])
 
-  const getProjectHref = (project: Project) =>
-    project.project_id ? `/admin/proyectos/${project.project_id}` : null
+  const getHref = (p: Project) => p.project_id ? `/admin/proyectos/${p.project_id}` : null
 
-  // ── KANBAN VIEW ──────────────────────────────────────────────────────────────
+  // ── KANBAN ───────────────────────────────────────────────────────────────────
 
   const KanbanView = () => {
-    const columnsWithProjects = ALL_ETAPAS
-      .map(etapa => ({
-        etapa,
-        projects: filteredProjects.filter(p => (p.etapas?.[0] || '') === etapa),
-      }))
-      .filter(col => col.projects.length > 0)
-
-    const noEtapa = filteredProjects.filter(p => !p.etapas || p.etapas.length === 0)
+    const columns = ALL_ETAPAS
+      .map(etapa => ({ etapa, items: filteredProjects.filter(p => (p.etapas?.[0] || '') === etapa) }))
+      .filter(c => c.items.length > 0)
+    const noEtapa = filteredProjects.filter(p => !p.etapas?.length)
 
     return (
-      <div className="flex gap-4 overflow-x-auto pb-6" style={{ minHeight: '60vh' }}>
-        {columnsWithProjects.map(col => {
+      <div className="flex gap-3 overflow-x-auto pb-6" style={{ minHeight: '70vh' }}>
+        {[...columns, ...(noEtapa.length ? [{ etapa: 'Sin etapa', items: noEtapa }] : [])].map(col => {
           const c = ETAPA_COLORS[col.etapa] || DEFAULT_COLOR
           return (
-            <div key={col.etapa} className="flex-shrink-0 w-72">
+            <div key={col.etapa} className="flex-shrink-0" style={{ width: '260px' }}>
               {/* Column header */}
-              <div
-                className="mb-3 px-3 py-2 rounded-lg flex items-center gap-2"
-                style={{ background: c.bg, border: `1px solid ${c.border}` }}
-              >
-                <span style={{ color: c.text }} className="text-xs font-semibold flex-1 leading-tight">
+              <div className="mb-2 px-3 py-2 rounded-lg flex items-center gap-2"
+                style={{ background: c.header, border: `1px solid ${c.border}` }}>
+                <span style={{ color: c.text }} className="text-xs font-semibold flex-1 leading-tight truncate">
                   {col.etapa}
                 </span>
-                <span className="bg-slate-900/40 text-slate-300 text-xs px-2 py-0.5 rounded-full font-medium">
-                  {col.projects.length}
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
+                  style={{ background: `${c.border}`, color: c.text }}>
+                  {col.items.length}
                 </span>
               </div>
+
               {/* Cards */}
-              <div className="flex flex-col gap-3">
-                {col.projects.map(project => {
+              <div className="flex flex-col gap-2">
+                {col.items.map(project => {
                   const etapaIdx = ALL_ETAPAS.indexOf(col.etapa)
                   const isUpdating = updatingId === project.id
-                  const href = getProjectHref(project)
+                  const href = getHref(project)
                   return (
-                    <div
-                      key={project.id}
-                      className={`bg-slate-800 border rounded-xl p-4 transition-all ${
-                        isUpdating
-                          ? 'opacity-50 border-slate-700'
-                          : 'border-slate-700 hover:border-slate-500'
-                      }`}
-                    >
-                      {/* Project name */}
+                    <div key={project.id}
+                      className={`rounded-xl p-3 transition-all ${isUpdating ? 'opacity-40' : 'hover:brightness-110'}`}
+                      style={{
+                        background: '#1e293b',
+                        border: `1px solid ${isUpdating ? c.border : 'rgba(255,255,255,0.06)'}`,
+                      }}>
+                      {/* Name */}
                       {href ? (
-                        <Link href={href} className="block text-sm font-semibold text-white mb-2 hover:text-orange-400 transition-colors leading-snug">
+                        <Link href={href}
+                          className="block text-[13px] font-semibold text-white mb-1.5 hover:text-orange-400 transition-colors leading-snug line-clamp-2">
                           {project.nombre}
                         </Link>
                       ) : (
-                        <p className="text-sm font-semibold text-white mb-2 leading-snug">{project.nombre}</p>
+                        <p className="text-[13px] font-semibold text-slate-200 mb-1.5 leading-snug line-clamp-2">
+                          {project.nombre}
+                        </p>
                       )}
 
-                      {/* Estado badge */}
-                      {project.estado && (
-                        <div className="mb-2">
-                          <span className="text-xs px-2 py-0.5 rounded bg-slate-700 text-slate-300">
-                            {project.estado}
-                          </span>
-                        </div>
-                      )}
+                      {/* Estado (only if not default) */}
+                      <EstadoBadge estado={project.estado} />
 
-                      {/* Task progress */}
-                      <div className="mb-3">
-                        <TaskBar total={project.taskStats.total} done={project.taskStats.done} />
-                      </div>
-
-                      {/* KPIs */}
-                      {project.kpis.length > 0 && (
-                        <div className="mb-3">
-                          <span className="text-xs bg-orange-500/10 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded">
-                            📊 {project.kpis.length} KPI{project.kpis.length !== 1 ? 's' : ''}
-                          </span>
+                      {/* Task bar */}
+                      {project.taskStats.total > 0 && (
+                        <div className="mt-2">
+                          <TaskBar total={project.taskStats.total} done={project.taskStats.done} />
                         </div>
                       )}
 
                       {/* Footer */}
-                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-700/50">
-                        <Initials names={project.responsable || []} />
-                        <div className="flex gap-1">
-                          <button
-                            onClick={() => handleMoveEtapa(project, 'prev')}
-                            disabled={etapaIdx <= 0 || isUpdating}
-                            title="Etapa anterior"
-                            className="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-slate-300 text-sm transition-colors"
-                          >
-                            ←
-                          </button>
-                          <button
-                            onClick={() => handleMoveEtapa(project, 'next')}
-                            disabled={etapaIdx >= ALL_ETAPAS.length - 1 || isUpdating}
-                            title="Siguiente etapa"
-                            className="w-7 h-7 rounded-lg bg-slate-700 hover:bg-slate-600 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-slate-300 text-sm transition-colors"
-                          >
-                            →
-                          </button>
+                      <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-white/5">
+                        <div className="flex items-center gap-2">
+                          <Initials names={project.responsable || []} />
+                          {project.kpis.length > 0 && (
+                            <span className="text-[10px] text-orange-400/70">📊{project.kpis.length}</span>
+                          )}
                         </div>
+                        <MoveButtons
+                          etapaIdx={etapaIdx} isUpdating={isUpdating}
+                          onPrev={() => handleMoveEtapa(project, 'prev')}
+                          onNext={() => handleMoveEtapa(project, 'next')}
+                        />
                       </div>
                     </div>
                   )
@@ -263,117 +248,76 @@ export default function PMBoardPage() {
             </div>
           )
         })}
-
-        {/* Sin etapa column */}
-        {noEtapa.length > 0 && (
-          <div className="flex-shrink-0 w-72">
-            <div className="mb-3 px-3 py-2 rounded-lg flex items-center gap-2 bg-slate-800 border border-slate-700">
-              <span className="text-xs font-semibold text-slate-400 flex-1">Sin etapa</span>
-              <span className="bg-slate-700 text-slate-300 text-xs px-2 py-0.5 rounded-full">{noEtapa.length}</span>
-            </div>
-            <div className="flex flex-col gap-3">
-              {noEtapa.map(project => {
-                const href = getProjectHref(project)
-                return (
-                  <div key={project.id} className="bg-slate-800 border border-slate-700 rounded-xl p-4">
-                    {href ? (
-                      <Link href={href} className="block text-sm font-semibold text-white mb-2 hover:text-orange-400">
-                        {project.nombre}
-                      </Link>
-                    ) : (
-                      <p className="text-sm font-semibold text-white mb-2">{project.nombre}</p>
-                    )}
-                    <TaskBar total={project.taskStats.total} done={project.taskStats.done} />
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
       </div>
     )
   }
 
-  // ── TABLE VIEW ───────────────────────────────────────────────────────────────
+  // ── TABLE ────────────────────────────────────────────────────────────────────
 
   const TableView = () => (
-    <div className="overflow-x-auto rounded-xl border border-slate-700">
+    <div className="overflow-x-auto rounded-xl border border-slate-700/60">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-slate-700 bg-slate-800/60">
-            <th className="text-left px-4 py-3 text-slate-400 font-medium">Proyecto</th>
-            <th className="text-left px-4 py-3 text-slate-400 font-medium">Etapa</th>
-            <th className="text-left px-4 py-3 text-slate-400 font-medium">Estado</th>
-            <th className="text-left px-4 py-3 text-slate-400 font-medium">Plan</th>
-            <th className="text-left px-4 py-3 text-slate-400 font-medium">Responsable</th>
-            <th className="text-left px-4 py-3 text-slate-400 font-medium w-40">Tareas</th>
-            <th className="text-left px-4 py-3 text-slate-400 font-medium">KPIs</th>
-            <th className="text-center px-4 py-3 text-slate-400 font-medium">Mover</th>
+          <tr className="border-b border-slate-700/60 bg-slate-800/80">
+            <th className="text-left px-4 py-3 text-slate-400 font-medium text-xs uppercase tracking-wide">Proyecto</th>
+            <th className="text-left px-4 py-3 text-slate-400 font-medium text-xs uppercase tracking-wide">Etapa</th>
+            <th className="text-left px-4 py-3 text-slate-400 font-medium text-xs uppercase tracking-wide">Estado</th>
+            <th className="text-left px-4 py-3 text-slate-400 font-medium text-xs uppercase tracking-wide">Plan</th>
+            <th className="text-left px-4 py-3 text-slate-400 font-medium text-xs uppercase tracking-wide">Equipo</th>
+            <th className="text-left px-4 py-3 text-slate-400 font-medium text-xs uppercase tracking-wide w-40">Tareas</th>
+            <th className="text-left px-4 py-3 text-slate-400 font-medium text-xs uppercase tracking-wide">KPIs</th>
+            <th className="text-center px-3 py-3 text-slate-400 font-medium text-xs uppercase tracking-wide">Mover</th>
           </tr>
         </thead>
         <tbody>
           {filteredProjects.map(project => {
             const currentEtapa = project.etapas?.[0] || ''
             const etapaIdx = ALL_ETAPAS.indexOf(currentEtapa)
+            const c = ETAPA_COLORS[currentEtapa] || DEFAULT_COLOR
             const isUpdating = updatingId === project.id
-            const href = getProjectHref(project)
+            const href = getHref(project)
             return (
-              <tr
-                key={project.id}
-                className={`border-b border-slate-700/50 transition-colors ${
-                  isUpdating ? 'opacity-50' : 'hover:bg-slate-800/40'
-                }`}
-              >
-                <td className="px-4 py-3 max-w-[220px]">
+              <tr key={project.id}
+                className={`border-b border-slate-700/30 transition-colors ${isUpdating ? 'opacity-40' : 'hover:bg-slate-800/50'}`}>
+                <td className="px-4 py-3 max-w-[200px]">
                   {href ? (
-                    <Link href={href} className="font-medium text-white hover:text-orange-400 transition-colors line-clamp-2">
+                    <Link href={href} className="font-medium text-white hover:text-orange-400 transition-colors text-sm line-clamp-2">
                       {project.nombre}
                     </Link>
                   ) : (
-                    <span className="font-medium text-white">{project.nombre}</span>
+                    <span className="font-medium text-slate-200 text-sm">{project.nombre}</span>
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  {currentEtapa
-                    ? <EtapaBadge etapa={currentEtapa} />
-                    : <span className="text-slate-500 text-xs">—</span>}
+                  {currentEtapa ? (
+                    <span className="text-xs px-2 py-0.5 rounded font-medium whitespace-nowrap"
+                      style={{ background: c.bg, color: c.text, border: `1px solid ${c.border}` }}>
+                      {currentEtapa}
+                    </span>
+                  ) : <span className="text-slate-600 text-xs">—</span>}
                 </td>
                 <td className="px-4 py-3">
-                  {project.estado
-                    ? <span className="text-xs px-2 py-0.5 rounded bg-slate-700 text-slate-300">{project.estado}</span>
-                    : <span className="text-slate-500 text-xs">—</span>}
+                  <EstadoBadge estado={project.estado} />
+                  {(!project.estado || project.estado === 'Sin empezar') && <span className="text-slate-600 text-xs">—</span>}
                 </td>
                 <td className="px-4 py-3 text-slate-400 text-xs">{project.plan_type || '—'}</td>
                 <td className="px-4 py-3">
                   <Initials names={project.responsable || []} />
                 </td>
-                <td className="px-4 py-3">
-                  <TaskBar total={project.taskStats.total} done={project.taskStats.done} />
+                <td className="px-4 py-3 min-w-[130px]">
+                  {project.taskStats.total > 0
+                    ? <TaskBar total={project.taskStats.total} done={project.taskStats.done} />
+                    : <span className="text-slate-600 text-xs">—</span>}
                 </td>
                 <td className="px-4 py-3">
                   {project.kpis.length > 0
                     ? <span className="text-xs text-orange-400">📊 {project.kpis.length}</span>
-                    : <span className="text-slate-500 text-xs">—</span>}
+                    : <span className="text-slate-600 text-xs">—</span>}
                 </td>
-                <td className="px-4 py-3">
-                  <div className="flex gap-1 justify-center">
-                    <button
-                      onClick={() => handleMoveEtapa(project, 'prev')}
-                      disabled={etapaIdx <= 0 || isUpdating}
-                      title="Etapa anterior"
-                      className="w-7 h-7 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-slate-300 text-sm transition-colors"
-                    >
-                      ←
-                    </button>
-                    <button
-                      onClick={() => handleMoveEtapa(project, 'next')}
-                      disabled={etapaIdx >= ALL_ETAPAS.length - 1 || isUpdating}
-                      title="Siguiente etapa"
-                      className="w-7 h-7 rounded bg-slate-700 hover:bg-slate-600 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-slate-300 text-sm transition-colors"
-                    >
-                      →
-                    </button>
-                  </div>
+                <td className="px-3 py-3">
+                  <MoveButtons etapaIdx={etapaIdx} isUpdating={isUpdating}
+                    onPrev={() => handleMoveEtapa(project, 'prev')}
+                    onNext={() => handleMoveEtapa(project, 'next')} />
                 </td>
               </tr>
             )
@@ -381,7 +325,7 @@ export default function PMBoardPage() {
         </tbody>
       </table>
       {filteredProjects.length === 0 && !loading && (
-        <div className="text-center py-16 text-slate-500">No se encontraron proyectos</div>
+        <div className="text-center py-16 text-slate-500 text-sm">No se encontraron proyectos</div>
       )}
     </div>
   )
@@ -392,50 +336,46 @@ export default function PMBoardPage() {
     <div className="min-h-screen bg-slate-900 text-white">
       <div className="max-w-screen-2xl mx-auto px-6 py-8">
         {/* Header */}
-        <div className="flex flex-wrap items-center gap-4 mb-8">
-          <Link href="/admin" className="text-slate-400 hover:text-white text-sm transition-colors flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-4 mb-6">
+          <Link href="/admin" className="text-slate-500 hover:text-white text-sm transition-colors">
             ← Dashboard
           </Link>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold text-white">PM Board 📊</h1>
-            <p className="text-slate-400 text-sm mt-0.5">
-              {loading ? 'Cargando...' : `${filteredProjects.length} proyectos`}
-            </p>
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              PM Board
+              <span className="text-base font-normal text-slate-500">
+                {!loading && `· ${filteredProjects.length} proyectos`}
+              </span>
+            </h1>
           </div>
         </div>
 
         {/* Controls */}
         <div className="flex flex-wrap items-center gap-3 mb-6">
-          <input
-            type="text"
-            placeholder="Buscar proyecto..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/50 w-64 transition-colors"
-          />
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Buscar..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/50 w-56 transition-colors"
+            />
+            <span className="absolute left-3 top-2.5 text-slate-500 text-sm">🔍</span>
+          </div>
+
           <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
-            <button
-              onClick={() => setView('kanban')}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${
-                view === 'kanban' ? 'bg-orange-500 text-white' : 'text-slate-400 hover:text-white'
-              }`}
-            >
+            <button onClick={() => setView('kanban')}
+              className={`px-4 py-2 text-sm font-medium transition-all ${view === 'kanban' ? 'bg-orange-500 text-white' : 'text-slate-400 hover:text-white'}`}>
               🗂 Kanban
             </button>
-            <button
-              onClick={() => setView('table')}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${
-                view === 'table' ? 'bg-orange-500 text-white' : 'text-slate-400 hover:text-white'
-              }`}
-            >
+            <button onClick={() => setView('table')}
+              className={`px-4 py-2 text-sm font-medium transition-all ${view === 'table' ? 'bg-orange-500 text-white' : 'text-slate-400 hover:text-white'}`}>
               📋 Tabla
             </button>
           </div>
+
           {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="text-xs text-slate-400 hover:text-white transition-colors"
-            >
+            <button onClick={() => setSearch('')} className="text-xs text-slate-500 hover:text-white transition-colors">
               ✕ Limpiar
             </button>
           )}
@@ -443,9 +383,9 @@ export default function PMBoardPage() {
 
         {/* Content */}
         {loading ? (
-          <div className="flex items-center justify-center py-24 text-slate-400 gap-3">
-            <div className="w-5 h-5 border-2 border-slate-600 border-t-orange-500 rounded-full animate-spin" />
-            Cargando proyectos...
+          <div className="flex items-center justify-center py-32 text-slate-500 gap-3">
+            <div className="w-5 h-5 border-2 border-slate-700 border-t-orange-500 rounded-full animate-spin" />
+            <span className="text-sm">Cargando proyectos...</span>
           </div>
         ) : view === 'kanban' ? (
           <KanbanView />
