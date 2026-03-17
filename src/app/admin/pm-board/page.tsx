@@ -109,31 +109,24 @@ function MoveButtons({ etapaIdx, isUpdating, onPrev, onNext }: {
   etapaIdx: number; isUpdating: boolean
   onPrev: () => void; onNext: () => void
 }) {
+  const btnStyle = (disabled: boolean): React.CSSProperties => ({
+    padding: '3px 8px', borderRadius: '5px', fontSize: '11px', fontWeight: 600,
+    background: disabled ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.10)',
+    border: `1px solid ${disabled ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.18)'}`,
+    color: disabled ? '#334155' : '#94a3b8',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    transition: 'all 0.1s',
+    lineHeight: '16px',
+  })
   return (
     <div style={{ display: 'flex', gap: '4px' }}>
       <button onClick={onPrev} disabled={etapaIdx <= 0 || isUpdating}
-        title="Etapa anterior"
-        style={{
-          width: '24px', height: '24px', borderRadius: '6px',
-          background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
-          color: '#94a3b8', cursor: etapaIdx <= 0 || isUpdating ? 'not-allowed' : 'pointer',
-          opacity: etapaIdx <= 0 || isUpdating ? 0.25 : 1,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '12px', fontWeight: 700, lineHeight: 1,
-        }}>
-        {'<'}
+        title="Etapa anterior" style={btnStyle(etapaIdx <= 0 || isUpdating)}>
+        ‹ Prev
       </button>
       <button onClick={onNext} disabled={etapaIdx >= ALL_ETAPAS.length - 1 || isUpdating}
-        title="Siguiente etapa"
-        style={{
-          width: '24px', height: '24px', borderRadius: '6px',
-          background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
-          color: '#94a3b8', cursor: etapaIdx >= ALL_ETAPAS.length - 1 || isUpdating ? 'not-allowed' : 'pointer',
-          opacity: etapaIdx >= ALL_ETAPAS.length - 1 || isUpdating ? 0.25 : 1,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '12px', fontWeight: 700, lineHeight: 1,
-        }}>
-        {'>'}
+        title="Siguiente etapa" style={btnStyle(etapaIdx >= ALL_ETAPAS.length - 1 || isUpdating)}>
+        Next ›
       </button>
     </div>
   )
@@ -178,7 +171,7 @@ export default function PMBoardPage() {
     }
   }, [])
 
-  const getHref = (p: Project) => p.project_id ? `/admin/proyectos/${p.project_id}` : null
+  const getHref = (p: Project) => p.project_id ? `/proyectos/${p.project_id}` : null
 
   // ── KANBAN ───────────────────────────────────────────────────────────────────
 
@@ -221,7 +214,7 @@ export default function PMBoardPage() {
               </div>
 
               {/* Cards */}
-              <div className="flex flex-col gap-2.5">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {col.items.map(project => {
                   const etapaIdx = ALL_ETAPAS.indexOf(col.etapa)
                   const isUpdating = updatingId === project.id
@@ -232,17 +225,15 @@ export default function PMBoardPage() {
                   return (
                     <div key={project.id}
                       style={{
-                        background: '#0f172a',
-                        border: `2px solid ${c.border}`,
-                        borderRadius: '12px',
+                        background: '#162032',
+                        border: `1px solid ${c.border}`,
+                        borderLeft: `3px solid ${c.text}`,
+                        borderRadius: '10px',
                         overflow: 'hidden',
                         opacity: isUpdating ? 0.5 : 1,
                         transition: 'all 0.15s ease',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                        boxShadow: '0 2px 10px rgba(0,0,0,0.35)',
                       }}>
-                      {/* Color bar top */}
-                      <div style={{ height: '3px', background: c.text }} />
-
                       <div style={{ padding: '12px' }}>
                         {/* Name */}
                         {href ? (
@@ -411,7 +402,7 @@ export default function PMBoardPage() {
       <div className="max-w-screen-2xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="flex flex-wrap items-center gap-4 mb-6">
-          <Link href="/admin" className="text-slate-500 hover:text-white text-sm transition-colors">
+          <Link href="/" className="text-slate-500 hover:text-white text-sm transition-colors">
             ← Dashboard
           </Link>
           <div className="flex-1">
