@@ -140,7 +140,9 @@ async function fetchPageTasks(pageId) {
             task_text: text,
             checked: content.checked || false,
             section: currentSection,
-            position: tasks.length
+            position: tasks.length,
+            created_time: block.created_time || null,
+            last_edited_time: block.last_edited_time || null,
           });
         }
       }
@@ -162,7 +164,9 @@ async function fetchPageTasks(pageId) {
                   task_text: text,
                   checked: childContent.checked || false,
                   section: currentSection,
-                  position: tasks.length
+                  position: tasks.length,
+                  created_time: child.created_time || null,
+                  last_edited_time: child.last_edited_time || null,
                 });
               }
             }
@@ -244,6 +248,8 @@ function extractProps(page) {
 
   return {
     id: page.id,
+    created_time: page.created_time || null,
+    last_edited_time: page.last_edited_time || null,
     nombre: getTitle('Nombre de la empresa / nombre del representante'),
     estado: getStatus('Estado'),
     etapas: getMultiSelect('Etapa de implementación'),

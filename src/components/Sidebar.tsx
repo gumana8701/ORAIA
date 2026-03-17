@@ -10,6 +10,7 @@ const nav = [
   { href: '/onboarding',      label: 'Onboarding', icon: '🚀' },
   { href: '/admin/usuarios',      label: 'Usuarios',     icon: '🔐' },
   { href: '/admin/notion-link',   label: 'Notion Link',  icon: '📋' },
+  { href: '/admin/pm-board',      label: 'PM Board',     icon: '📊' },
   { href: '/admin/preview',       label: 'Ver como…',    icon: '👁️' },
 ]
 
