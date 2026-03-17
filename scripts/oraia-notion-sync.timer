@@ -1,9 +1,9 @@
 [Unit]
-Description=ORAIA Notion Sync — every 30 minutes
+Description=ORAIA Notion Sync — every 5 minutes
 
 [Timer]
-OnBootSec=5min
-OnUnitActiveSec=30min
+OnBootSec=2min
+OnUnitActiveSec=5min
 
 [Install]
 WantedBy=timers.target
