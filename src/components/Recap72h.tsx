@@ -138,13 +138,22 @@ export default function Recap72h({ projectId }: { projectId: string }) {
         </div>
       </div>
 
-      {/* Recap text */}
-      <p style={{
-        fontSize: '13px', color: '#cbd5e0', lineHeight: '1.6',
-        margin: 0,
-      }}>
-        {data.recap_text}
-      </p>
+      {/* Recap text — render with line breaks and bold */}
+      <div style={{ fontSize: '13px', color: '#cbd5e0', lineHeight: '1.7' }}>
+        {data.recap_text.split('\n').map((line, i) => {
+          if (!line.trim()) return <div key={i} style={{ height: '6px' }} />
+          // Bold **text**
+          const parts = line.split(/\*\*(.*?)\*\*/g)
+          return (
+            <div key={i} style={{ marginBottom: line.startsWith('-') || line.startsWith('•') ? '2px' : '0' }}>
+              {parts.map((p, j) => j % 2 === 1
+                ? <strong key={j} style={{ color: '#e2e8f0', fontWeight: 600 }}>{p}</strong>
+                : <span key={j}>{p}</span>
+              )}
+            </div>
+          )
+        })}
+      </div>
 
       {/* Footer */}
       <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'flex-end' }}>

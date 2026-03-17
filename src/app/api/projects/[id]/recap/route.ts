@@ -27,7 +27,7 @@ async function generateRecap(projectId: string, projectName: string): Promise<{
   // Fetch last 72h data in parallel
   const [msgRes, briefRes, alertRes] = await Promise.all([
     sb.from('messages')
-      .select('content, timestamp, es_del_cliente, source')
+      .select('contenido, timestamp, es_del_cliente, fuente')
       .eq('project_id', projectId)
       .gte('timestamp', cutoff)
       .order('timestamp', { ascending: false })
@@ -68,8 +68,8 @@ async function generateRecap(projectId: string, projectName: string): Promise<{
   }
 
   // Build context for Gemini
-  const msgSample = messages.slice(0, 30).map(m =>
-    `[${new Date(m.timestamp).toLocaleString('es-MX', { timeZone: 'America/El_Salvador' })}] ${m.es_del_cliente ? 'CLIENTE' : 'EQUIPO'}: ${m.content?.slice(0, 200) || ''}`
+  const msgSample = messages.slice(0, 30).map((m: any) =>
+    `[${new Date(m.timestamp).toLocaleString('es-MX', { timeZone: 'America/El_Salvador' })}] ${m.es_del_cliente ? 'CLIENTE' : 'EQUIPO'} (${m.fuente || 'whatsapp'}): ${(m.contenido || '').slice(0, 200)}`
   ).join('\n')
 
   const briefSample = briefs.map(b =>
@@ -80,21 +80,24 @@ async function generateRecap(projectId: string, projectName: string): Promise<{
     `ALERTA [${a.nivel}]: ${a.tipo} — ${a.descripcion}`
   ).join('\n')
 
-  const prompt = `Eres un asistente de operations de ORA AI. Genera un recap ejecutivo de las últimas 72 horas del proyecto "${projectName}".
+  const prompt = `Eres un asistente de operations de ORA AI. Genera un brief detallado de las últimas 72 horas del proyecto "${projectName}".
 
 DATOS DISPONIBLES:
 
-${msgSample ? `MENSAJES (${msg_count_72h} total):\n${msgSample}` : ''}
-${briefSample ? `\nREUNIONES:\n${briefSample}` : ''}
-${alertSample ? `\nALERTAS:\n${alertSample}` : ''}
+${msgSample ? `MENSAJES WhatsApp/Slack (${msg_count_72h} total, mostrando últimos 30):\n${msgSample}` : 'Sin mensajes en 72h.'}
+${briefSample ? `\nREUNIONES/MEETS:\n${briefSample}` : '\nSin reuniones en 72h.'}
+${alertSample ? `\nALERTAS DETECTADAS:\n${alertSample}` : '\nSin alertas en 72h.'}
 
-Instrucciones:
-- Máximo 4-5 oraciones, tono directo y ejecutivo
-- Menciona: qué pasó, cómo está el cliente, qué está pendiente
-- Si hay alertas, menciona el riesgo brevemente
-- Si hay reuniones, menciona decisiones o action items clave
-- NO menciones que eres una IA, responde directamente como si fuera una nota de operaciones
-- Responde en español`
+Instrucciones para el brief:
+1. **Resumen ejecutivo** (2-3 oraciones): qué pasó en general, cómo está la comunicación
+2. **Estado del cliente** (1-2 oraciones): cómo se ve el cliente, si está activo, si tiene dudas/problemas
+3. **Temas clave tratados**: lista bullet de los temas principales que surgieron en los mensajes
+4. **Pendientes / Action items**: qué quedó pendiente, qué necesita seguimiento del equipo
+5. **Riesgos** (solo si hay): señales de alerta o fricción detectadas
+
+Formato: usa los emojis 📋 🤝 💬 ⚡ ⚠️ para los encabezados de cada sección.
+Tono: directo, operacional, como una nota de briefing para el equipo.
+NO menciones que eres IA. Responde en español.`
 
   try {
     const res = await fetch(
@@ -104,7 +107,7 @@ Instrucciones:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 300 },
+          generationConfig: { temperature: 0.3, maxOutputTokens: 800 },
         }),
       }
     )
