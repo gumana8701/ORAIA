@@ -110,16 +110,30 @@ function MoveButtons({ etapaIdx, isUpdating, onPrev, onNext }: {
   onPrev: () => void; onNext: () => void
 }) {
   return (
-    <div className="flex gap-1">
+    <div style={{ display: 'flex', gap: '4px' }}>
       <button onClick={onPrev} disabled={etapaIdx <= 0 || isUpdating}
         title="Etapa anterior"
-        className="w-6 h-6 rounded bg-slate-700/80 hover:bg-slate-600 disabled:opacity-20 disabled:cursor-not-allowed flex items-center justify-center text-slate-400 text-xs transition-colors">
-        ←
+        style={{
+          width: '24px', height: '24px', borderRadius: '6px',
+          background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
+          color: '#94a3b8', cursor: etapaIdx <= 0 || isUpdating ? 'not-allowed' : 'pointer',
+          opacity: etapaIdx <= 0 || isUpdating ? 0.25 : 1,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '12px', fontWeight: 700, lineHeight: 1,
+        }}>
+        {'<'}
       </button>
       <button onClick={onNext} disabled={etapaIdx >= ALL_ETAPAS.length - 1 || isUpdating}
         title="Siguiente etapa"
-        className="w-6 h-6 rounded bg-slate-700/80 hover:bg-slate-600 disabled:opacity-20 disabled:cursor-not-allowed flex items-center justify-center text-slate-400 text-xs transition-colors">
-        →
+        style={{
+          width: '24px', height: '24px', borderRadius: '6px',
+          background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
+          color: '#94a3b8', cursor: etapaIdx >= ALL_ETAPAS.length - 1 || isUpdating ? 'not-allowed' : 'pointer',
+          opacity: etapaIdx >= ALL_ETAPAS.length - 1 || isUpdating ? 0.25 : 1,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '12px', fontWeight: 700, lineHeight: 1,
+        }}>
+        {'>'}
       </button>
     </div>
   )
@@ -181,18 +195,27 @@ export default function PMBoardPage() {
           return (
             <div key={col.etapa} className="flex-shrink-0" style={{ width: '280px' }}>
               {/* Column header */}
-              <div className="mb-3 px-3 py-2.5 rounded-xl flex items-center gap-2 sticky top-0 z-10"
-                style={{
-                  background: c.header,
-                  border: `1px solid ${c.border}`,
-                  backdropFilter: 'blur(8px)',
+              <div style={{
+                marginBottom: '10px', padding: '8px 12px', borderRadius: '10px',
+                display: 'flex', alignItems: 'center', gap: '8px',
+                background: c.header, border: `1px solid ${c.border}`,
+                position: 'sticky', top: 0, zIndex: 10,
+              }}>
+                <div style={{
+                  width: '8px', height: '8px', borderRadius: '50%',
+                  background: c.text, flexShrink: 0,
+                }} />
+                <span style={{
+                  color: c.text, fontSize: '11px', fontWeight: 700,
+                  flex: 1, lineHeight: '1.3',
                 }}>
-                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: c.text }} />
-                <span style={{ color: c.text }} className="text-xs font-bold flex-1 leading-tight">
                   {col.etapa}
                 </span>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0"
-                  style={{ background: 'rgba(0,0,0,0.2)', color: c.text }}>
+                <span style={{
+                  fontSize: '11px', fontWeight: 700, padding: '1px 7px',
+                  borderRadius: '10px', background: 'rgba(0,0,0,0.25)',
+                  color: c.text, flexShrink: 0,
+                }}>
                   {col.items.length}
                 </span>
               </div>
@@ -208,69 +231,82 @@ export default function PMBoardPage() {
                     : null
                   return (
                     <div key={project.id}
-                      className={`rounded-xl transition-all ${isUpdating ? 'opacity-40' : 'hover:translate-y-[-1px] hover:shadow-lg'}`}
                       style={{
-                        background: 'linear-gradient(135deg, #1e293b 0%, #1a2336 100%)',
-                        border: `1px solid rgba(255,255,255,0.10)`,
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                        background: '#0f172a',
+                        border: `2px solid ${c.border}`,
+                        borderRadius: '12px',
+                        overflow: 'hidden',
+                        opacity: isUpdating ? 0.5 : 1,
+                        transition: 'all 0.15s ease',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
                       }}>
-                      {/* Color strip at top */}
-                      <div className="h-0.5 rounded-t-xl" style={{ background: c.text, opacity: 0.6 }} />
+                      {/* Color bar top */}
+                      <div style={{ height: '3px', background: c.text }} />
 
-                      <div className="p-3">
+                      <div style={{ padding: '12px' }}>
                         {/* Name */}
                         {href ? (
-                          <Link href={href}
-                            className="block text-[13px] font-semibold text-white mb-2 hover:text-orange-400 transition-colors leading-snug line-clamp-2">
+                          <Link href={href} style={{
+                            display: 'block', fontSize: '13px', fontWeight: 600,
+                            color: '#f1f5f9', marginBottom: '8px', lineHeight: '1.4',
+                            textDecoration: 'none',
+                          }}>
                             {project.nombre}
                           </Link>
                         ) : (
-                          <p className="text-[13px] font-semibold text-slate-200 mb-2 leading-snug line-clamp-2">
+                          <p style={{
+                            fontSize: '13px', fontWeight: 600, color: '#f1f5f9',
+                            marginBottom: '8px', lineHeight: '1.4', margin: '0 0 8px 0',
+                          }}>
                             {project.nombre}
                           </p>
                         )}
 
                         {/* Estado badge */}
                         {project.estado && project.estado !== 'Sin empezar' && (
-                          <div className="mb-2">
+                          <div style={{ marginBottom: '8px' }}>
                             <EstadoBadge estado={project.estado} />
                           </div>
                         )}
 
                         {/* Task progress */}
                         {project.taskStats.total > 0 && (
-                          <div className="mb-2">
-                            <div className="flex justify-between items-center mb-1">
-                              <span className="text-[10px] text-slate-500">Tareas</span>
-                              <span className="text-[10px] text-slate-400 font-medium tabular-nums">
-                                {project.taskStats.done}/{project.taskStats.total}
-                                {pct !== null && <span className="text-slate-600"> · {pct}%</span>}
+                          <div style={{ marginBottom: '8px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                              <span style={{ fontSize: '10px', color: '#64748b' }}>Tareas</span>
+                              <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 600 }}>
+                                {project.taskStats.done}/{project.taskStats.total} · {pct}%
                               </span>
                             </div>
-                            <div className="h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
-                              <div className="h-1.5 rounded-full transition-all"
-                                style={{
-                                  width: `${pct}%`,
-                                  background: pct === 100 ? '#22c55e' : c.text,
-                                  opacity: 0.8,
-                                }} />
+                            <div style={{ height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.08)' }}>
+                              <div style={{
+                                height: '4px', borderRadius: '2px',
+                                width: `${pct}%`,
+                                background: pct === 100 ? '#22c55e' : c.text,
+                                transition: 'width 0.3s ease',
+                              }} />
                             </div>
                           </div>
                         )}
 
                         {/* KPIs */}
                         {project.kpis.length > 0 && (
-                          <div className="mb-2">
-                            <span className="text-[10px] px-1.5 py-0.5 rounded"
-                              style={{ background: 'rgba(232,121,47,0.12)', color: '#E8792F', border: '1px solid rgba(232,121,47,0.20)' }}>
+                          <div style={{ marginBottom: '8px' }}>
+                            <span style={{
+                              fontSize: '10px', padding: '2px 6px', borderRadius: '4px',
+                              background: 'rgba(232,121,47,0.15)', color: '#E8792F',
+                              border: '1px solid rgba(232,121,47,0.25)', fontWeight: 600,
+                            }}>
                               📊 {project.kpis.length} KPI{project.kpis.length !== 1 ? 's' : ''}
                             </span>
                           </div>
                         )}
 
                         {/* Footer */}
-                        <div className="flex items-center justify-between pt-2"
-                          style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.07)',
+                        }}>
                           <Initials names={project.responsable || []} />
                           <MoveButtons
                             etapaIdx={etapaIdx} isUpdating={isUpdating}
