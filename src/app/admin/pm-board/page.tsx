@@ -398,49 +398,68 @@ export default function PMBoardPage() {
   // ── RENDER ───────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
-      <div className="max-w-screen-2xl mx-auto px-6 py-8">
+    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'Inter, sans-serif' }}>
+      <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '32px 24px' }}>
+
         {/* Header */}
-        <div className="flex flex-wrap items-center gap-4 mb-6">
-          <Link href="/" className="text-slate-500 hover:text-white text-sm transition-colors">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+          <Link href="/" style={{
+            fontSize: '13px', color: '#64748b', textDecoration: 'none', fontWeight: 500,
+            padding: '6px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.08)',
+          }}>
             ← Dashboard
           </Link>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <div>
+            <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#f1f5f9', margin: 0, lineHeight: 1.2 }}>
               PM Board
-              <span className="text-base font-normal text-slate-500">
-                {!loading && `· ${filteredProjects.length} proyectos`}
+              <span style={{ fontSize: '14px', fontWeight: 400, color: '#475569', marginLeft: '8px' }}>
+                {!loading && `${filteredProjects.length} proyectos`}
               </span>
             </h1>
           </div>
         </div>
 
         {/* Controls */}
-        <div className="flex flex-wrap items-center gap-3 mb-6">
-          <div className="relative">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative' }}>
+            <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px' }}>🔍</span>
             <input
               type="text"
-              placeholder="Buscar..."
+              placeholder="Buscar proyecto..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/50 w-56 transition-colors"
+              style={{
+                background: '#1e293b', border: '1px solid #334155', borderRadius: '8px',
+                padding: '8px 12px 8px 32px', fontSize: '13px', color: '#f1f5f9',
+                outline: 'none', width: '220px',
+              }}
             />
-            <span className="absolute left-3 top-2.5 text-slate-500 text-sm">🔍</span>
           </div>
 
-          <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
-            <button onClick={() => setView('kanban')}
-              className={`px-4 py-2 text-sm font-medium transition-all ${view === 'kanban' ? 'bg-orange-500 text-white' : 'text-slate-400 hover:text-white'}`}>
+          <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', border: '1px solid #334155' }}>
+            <button onClick={() => setView('kanban')} style={{
+              padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+              background: view === 'kanban' ? '#E8792F' : '#1e293b',
+              color: view === 'kanban' ? '#fff' : '#94a3b8',
+              border: 'none', transition: 'all 0.15s',
+            }}>
               🗂 Kanban
             </button>
-            <button onClick={() => setView('table')}
-              className={`px-4 py-2 text-sm font-medium transition-all ${view === 'table' ? 'bg-orange-500 text-white' : 'text-slate-400 hover:text-white'}`}>
+            <button onClick={() => setView('table')} style={{
+              padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+              background: view === 'table' ? '#E8792F' : '#1e293b',
+              color: view === 'table' ? '#fff' : '#94a3b8',
+              border: 'none', borderLeft: '1px solid #334155', transition: 'all 0.15s',
+            }}>
               📋 Tabla
             </button>
           </div>
 
           {search && (
-            <button onClick={() => setSearch('')} className="text-xs text-slate-500 hover:text-white transition-colors">
+            <button onClick={() => setSearch('')} style={{
+              fontSize: '12px', color: '#64748b', background: 'none', border: 'none', cursor: 'pointer',
+            }}>
               ✕ Limpiar
             </button>
           )}
@@ -448,9 +467,13 @@ export default function PMBoardPage() {
 
         {/* Content */}
         {loading ? (
-          <div className="flex items-center justify-center py-32 text-slate-500 gap-3">
-            <div className="w-5 h-5 border-2 border-slate-700 border-t-orange-500 rounded-full animate-spin" />
-            <span className="text-sm">Cargando proyectos...</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '80px', color: '#475569', gap: '12px' }}>
+            <div style={{
+              width: '20px', height: '20px', borderRadius: '50%',
+              border: '2px solid #334155', borderTopColor: '#E8792F',
+              animation: 'spin 0.8s linear infinite',
+            }} />
+            <span style={{ fontSize: '14px' }}>Cargando proyectos...</span>
           </div>
         ) : view === 'kanban' ? (
           <KanbanView />
