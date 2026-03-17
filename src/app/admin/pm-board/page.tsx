@@ -179,67 +179,105 @@ export default function PMBoardPage() {
         {[...columns, ...(noEtapa.length ? [{ etapa: 'Sin etapa', items: noEtapa }] : [])].map(col => {
           const c = ETAPA_COLORS[col.etapa] || DEFAULT_COLOR
           return (
-            <div key={col.etapa} className="flex-shrink-0" style={{ width: '260px' }}>
+            <div key={col.etapa} className="flex-shrink-0" style={{ width: '280px' }}>
               {/* Column header */}
-              <div className="mb-2 px-3 py-2 rounded-lg flex items-center gap-2"
-                style={{ background: c.header, border: `1px solid ${c.border}` }}>
-                <span style={{ color: c.text }} className="text-xs font-semibold flex-1 leading-tight truncate">
+              <div className="mb-3 px-3 py-2.5 rounded-xl flex items-center gap-2 sticky top-0 z-10"
+                style={{
+                  background: c.header,
+                  border: `1px solid ${c.border}`,
+                  backdropFilter: 'blur(8px)',
+                }}>
+                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: c.text }} />
+                <span style={{ color: c.text }} className="text-xs font-bold flex-1 leading-tight">
                   {col.etapa}
                 </span>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0"
-                  style={{ background: `${c.border}`, color: c.text }}>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0"
+                  style={{ background: 'rgba(0,0,0,0.2)', color: c.text }}>
                   {col.items.length}
                 </span>
               </div>
 
               {/* Cards */}
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2.5">
                 {col.items.map(project => {
                   const etapaIdx = ALL_ETAPAS.indexOf(col.etapa)
                   const isUpdating = updatingId === project.id
                   const href = getHref(project)
+                  const pct = project.taskStats.total > 0
+                    ? Math.round((project.taskStats.done / project.taskStats.total) * 100)
+                    : null
                   return (
                     <div key={project.id}
-                      className={`rounded-xl p-3 transition-all ${isUpdating ? 'opacity-40' : 'hover:brightness-110'}`}
+                      className={`rounded-xl transition-all ${isUpdating ? 'opacity-40' : 'hover:translate-y-[-1px] hover:shadow-lg'}`}
                       style={{
-                        background: '#1e293b',
-                        border: `1px solid ${isUpdating ? c.border : 'rgba(255,255,255,0.06)'}`,
+                        background: 'linear-gradient(135deg, #1e293b 0%, #1a2336 100%)',
+                        border: `1px solid rgba(255,255,255,0.10)`,
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
                       }}>
-                      {/* Name */}
-                      {href ? (
-                        <Link href={href}
-                          className="block text-[13px] font-semibold text-white mb-1.5 hover:text-orange-400 transition-colors leading-snug line-clamp-2">
-                          {project.nombre}
-                        </Link>
-                      ) : (
-                        <p className="text-[13px] font-semibold text-slate-200 mb-1.5 leading-snug line-clamp-2">
-                          {project.nombre}
-                        </p>
-                      )}
+                      {/* Color strip at top */}
+                      <div className="h-0.5 rounded-t-xl" style={{ background: c.text, opacity: 0.6 }} />
 
-                      {/* Estado (only if not default) */}
-                      <EstadoBadge estado={project.estado} />
+                      <div className="p-3">
+                        {/* Name */}
+                        {href ? (
+                          <Link href={href}
+                            className="block text-[13px] font-semibold text-white mb-2 hover:text-orange-400 transition-colors leading-snug line-clamp-2">
+                            {project.nombre}
+                          </Link>
+                        ) : (
+                          <p className="text-[13px] font-semibold text-slate-200 mb-2 leading-snug line-clamp-2">
+                            {project.nombre}
+                          </p>
+                        )}
 
-                      {/* Task bar */}
-                      {project.taskStats.total > 0 && (
-                        <div className="mt-2">
-                          <TaskBar total={project.taskStats.total} done={project.taskStats.done} />
-                        </div>
-                      )}
+                        {/* Estado badge */}
+                        {project.estado && project.estado !== 'Sin empezar' && (
+                          <div className="mb-2">
+                            <EstadoBadge estado={project.estado} />
+                          </div>
+                        )}
 
-                      {/* Footer */}
-                      <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-white/5">
-                        <div className="flex items-center gap-2">
+                        {/* Task progress */}
+                        {project.taskStats.total > 0 && (
+                          <div className="mb-2">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-[10px] text-slate-500">Tareas</span>
+                              <span className="text-[10px] text-slate-400 font-medium tabular-nums">
+                                {project.taskStats.done}/{project.taskStats.total}
+                                {pct !== null && <span className="text-slate-600"> · {pct}%</span>}
+                              </span>
+                            </div>
+                            <div className="h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                              <div className="h-1.5 rounded-full transition-all"
+                                style={{
+                                  width: `${pct}%`,
+                                  background: pct === 100 ? '#22c55e' : c.text,
+                                  opacity: 0.8,
+                                }} />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* KPIs */}
+                        {project.kpis.length > 0 && (
+                          <div className="mb-2">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded"
+                              style={{ background: 'rgba(232,121,47,0.12)', color: '#E8792F', border: '1px solid rgba(232,121,47,0.20)' }}>
+                              📊 {project.kpis.length} KPI{project.kpis.length !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Footer */}
+                        <div className="flex items-center justify-between pt-2"
+                          style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                           <Initials names={project.responsable || []} />
-                          {project.kpis.length > 0 && (
-                            <span className="text-[10px] text-orange-400/70">📊{project.kpis.length}</span>
-                          )}
+                          <MoveButtons
+                            etapaIdx={etapaIdx} isUpdating={isUpdating}
+                            onPrev={() => handleMoveEtapa(project, 'prev')}
+                            onNext={() => handleMoveEtapa(project, 'next')}
+                          />
                         </div>
-                        <MoveButtons
-                          etapaIdx={etapaIdx} isUpdating={isUpdating}
-                          onPrev={() => handleMoveEtapa(project, 'prev')}
-                          onNext={() => handleMoveEtapa(project, 'next')}
-                        />
                       </div>
                     </div>
                   )
