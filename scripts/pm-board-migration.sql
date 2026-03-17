@@ -26,3 +26,17 @@ CREATE TABLE IF NOT EXISTS project_status_history (
 CREATE INDEX IF NOT EXISTS idx_psh_project_id ON project_status_history(project_id);
 CREATE INDEX IF NOT EXISTS idx_psh_notion_id ON project_status_history(notion_project_id);
 CREATE INDEX IF NOT EXISTS idx_psh_changed_at ON project_status_history(changed_at DESC);
+
+-- Project 72h recap cache
+CREATE TABLE IF NOT EXISTS project_recaps (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+  recap_text TEXT NOT NULL,
+  msg_count_72h INTEGER DEFAULT 0,
+  meeting_count_72h INTEGER DEFAULT 0,
+  alert_count_72h INTEGER DEFAULT 0,
+  last_client_msg TIMESTAMPTZ,
+  generated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(project_id)
+);
+CREATE INDEX IF NOT EXISTS idx_project_recaps_pid ON project_recaps(project_id);

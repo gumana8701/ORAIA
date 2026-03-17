@@ -8,6 +8,7 @@ import ActivityFeed from '@/components/ActivityFeed'
 import ProjectKPIs from '@/components/ProjectKPIs'
 import ProjectKPIsEditor from '@/components/ProjectKPIsEditor'
 import NotionTasksTab from '@/components/NotionTasksTab'
+import Recap72h from '@/components/Recap72h'
 import { getSessionProfile } from '@/lib/auth'
 
 const nivelColor: Record<string, string> = {
@@ -200,6 +201,9 @@ export default async function ProyectoDetalle({
           </div>
         )}
       </div>
+
+      {/* 72h Recap */}
+      <Recap72h projectId={id} />
 
       {/* Tabs */}
       <div style={{display:'flex',gap:'4px',marginBottom:'20px',borderBottom:'1px solid rgba(255,255,255,0.06)',paddingBottom:'0'}}>
