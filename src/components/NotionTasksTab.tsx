@@ -9,8 +9,8 @@ interface NotionProject {
   responsable: string[]
   resp_chatbot: string[]
   resp_voz: string[]
-  plan_type: string
-  plan_pagos: string
+  plan_type: string | null
+  plan_pagos: string | null
   lanzamiento_real: string | null
   testeo_inicia: string | null
   kick_off_date: string | null
@@ -19,6 +19,10 @@ interface NotionProject {
   notion_url: string | null
   cantidad_contratada: number | null
   saldo_pendiente: number | null
+  contact_email: string | null
+  contact_phone: string | null
+  created_time: string | null
+  last_edited_time: string | null
 }
 
 interface NotionTask {
@@ -27,6 +31,8 @@ interface NotionTask {
   checked: boolean
   section: string
   position: number
+  created_time: string | null
+  last_edited_time: string | null
 }
 
 interface TaskStats {
@@ -258,29 +264,63 @@ function EstadoSelector({
   )
 }
 
+function daysSince(dateStr: string | null): number | null {
+  if (!dateStr) return null
+  const diff = Date.now() - new Date(dateStr).getTime()
+  return Math.floor(diff / (1000 * 60 * 60 * 24))
+}
+
+function fmtRelative(dateStr: string | null): string {
+  if (!dateStr) return '—'
+  const days = daysSince(dateStr)!
+  if (days === 0) return 'Hoy'
+  if (days === 1) return 'Ayer'
+  if (days < 7) return `Hace ${days} días`
+  if (days < 30) return `Hace ${Math.floor(days / 7)} sem`
+  if (days < 365) return `Hace ${Math.floor(days / 30)} meses`
+  return `Hace ${Math.floor(days / 365)} años`
+}
+
 export default function NotionTasksTab({ projectId }: { projectId: string }) {
   const [notionProject, setNotionProject] = useState<NotionProject | null>(null)
   const [tasks, setTasks] = useState<NotionTask[]>([])
   const [stats, setStats] = useState<TaskStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch(`/api/notion?project_id=${projectId}`)
-        const data = await res.json()
-        setNotionProject(data.notion_project)
-        setTasks(data.tasks || [])
-        setStats(data.task_stats)
-      } catch (e: any) {
-        setError(e.message)
-      } finally {
-        setLoading(false)
-      }
+  async function load() {
+    try {
+      const res = await fetch(`/api/notion?project_id=${projectId}`)
+      const data = await res.json()
+      setNotionProject(data.notion_project)
+      setTasks(data.tasks || [])
+      setStats(data.task_stats)
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
     }
-    load()
-  }, [projectId])
+  }
+
+  useEffect(() => { load() }, [projectId])
+
+  async function handleSync() {
+    if (!notionProject) return
+    setSyncing(true)
+    try {
+      await fetch('/api/notion/sync-project', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notion_page_id: notionProject.id }),
+      })
+      // Reload data
+      setLoading(true)
+      await load()
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   if (loading) return (
     <div style={{ textAlign: 'center', padding: '40px', color: '#A0AEC0', fontSize: '13px' }}>
@@ -326,13 +366,30 @@ export default function NotionTasksTab({ projectId }: { projectId: string }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '16px' }}>📋</span>
             <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#fff', margin: 0 }}>Notion Tracker</h3>
+            {notionProject.last_edited_time && (
+              <span style={{ fontSize: '10px', color: '#4a5568', fontWeight: 400 }}>
+                · Actualizado {fmtRelative(notionProject.last_edited_time)}
+              </span>
+            )}
           </div>
-          {notionProject.notion_url && (
-            <a href={notionProject.notion_url} target="_blank" rel="noopener noreferrer"
-              style={{ fontSize: '11px', color: '#E8792F', textDecoration: 'none', fontWeight: 600 }}>
-              Abrir en Notion ↗
-            </a>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {notionProject.notion_url && (
+              <a href={notionProject.notion_url} target="_blank" rel="noopener noreferrer"
+                style={{ fontSize: '11px', color: '#E8792F', textDecoration: 'none', fontWeight: 600 }}>
+                Abrir en Notion ↗
+              </a>
+            )}
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              style={{
+                fontSize: '11px', fontWeight: 600, padding: '4px 10px', borderRadius: '6px',
+                background: 'rgba(232,121,47,0.10)', border: '1px solid rgba(232,121,47,0.25)',
+                color: '#E8792F', cursor: syncing ? 'not-allowed' : 'pointer', opacity: syncing ? 0.6 : 1,
+              }}>
+              {syncing ? '⟳ Sincronizando...' : '⟳ Sync Notion'}
+            </button>
+          </div>
         </div>
 
         {/* Etapas — editable */}
@@ -347,8 +404,9 @@ export default function NotionTasksTab({ projectId }: { projectId: string }) {
           />
         </div>
 
-        {/* Grid de metadata */}
+        {/* Grid de metadata — solo campos con datos */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '10px' }}>
+          {/* Estado/Sesiones — siempre visible */}
           <div>
             <div style={{ fontSize: '10px', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Sesiones</div>
             <EstadoSelector
@@ -357,25 +415,100 @@ export default function NotionTasksTab({ projectId }: { projectId: string }) {
               onSaved={(newEstado) => setNotionProject(prev => prev ? { ...prev, estado: newEstado } : prev)}
             />
           </div>
-          <MetaItem label="Plan" value={notionProject.plan_type || '—'} />
-          <MetaItem label="Responsable" value={notionProject.responsable?.join(', ') || '—'} />
+
+          {/* Responsable — siempre visible */}
+          {notionProject.responsable?.length > 0 && (
+            <MetaItem label="Responsable" value={notionProject.responsable.join(', ')} />
+          )}
+
+          {/* Plan */}
+          {notionProject.plan_type && (
+            <MetaItem label="Plan" value={notionProject.plan_type} />
+          )}
+          {notionProject.plan_pagos && (
+            <MetaItem label="Plan pagos" value={notionProject.plan_pagos} />
+          )}
+
+          {/* Equipo */}
           {notionProject.resp_chatbot?.length > 0 && (
             <MetaItem label="Resp. Chatbot" value={notionProject.resp_chatbot.join(', ')} />
           )}
           {notionProject.resp_voz?.length > 0 && (
             <MetaItem label="Resp. Voz" value={notionProject.resp_voz.join(', ')} />
           )}
-          <MetaItem label="Kick-off" value={fmtDate(notionProject.kick_off_date)} />
-          <MetaItem label="Testeo" value={fmtDate(notionProject.testeo_inicia)} />
-          <MetaItem label="Lanzamiento" value={fmtDate(notionProject.lanzamiento_real)} />
-          {notionProject.es_chatbot && <MetaItem label="Tipo" value="🤖 Chatbot" />}
+
+          {/* Fechas clave */}
+          {notionProject.kick_off_date && (
+            <MetaItem label="Kick-off" value={fmtDate(notionProject.kick_off_date)} />
+          )}
+          {notionProject.testeo_inicia && (
+            <MetaItem label="Inicio testeo" value={fmtDate(notionProject.testeo_inicia)} />
+          )}
+          {notionProject.lanzamiento_real && (
+            <MetaItem label="Lanzamiento" value={fmtDate(notionProject.lanzamiento_real)} />
+          )}
+
+          {/* Tipo */}
+          {notionProject.es_chatbot && (
+            <MetaItem label="Tipo" value="🤖 Chatbot" />
+          )}
+
+          {/* Financiero */}
           {notionProject.cantidad_contratada != null && (
             <MetaItem label="Contratado" value={`$${notionProject.cantidad_contratada.toLocaleString()}`} />
           )}
           {notionProject.saldo_pendiente != null && notionProject.saldo_pendiente > 0 && (
             <MetaItem label="Saldo pendiente" value={`$${notionProject.saldo_pendiente.toLocaleString()}`} accent />
           )}
+
+          {/* Contacto */}
+          {notionProject.contact_email && (
+            <MetaItem label="Email cliente" value={notionProject.contact_email} />
+          )}
+          {notionProject.contact_phone && (
+            <MetaItem label="Tel. cliente" value={notionProject.contact_phone} />
+          )}
         </div>
+
+        {/* Tiempo KPIs */}
+        {(notionProject.created_time || notionProject.last_edited_time) && (
+          <div style={{
+            display: 'flex', gap: '16px', flexWrap: 'wrap',
+            marginTop: '14px', paddingTop: '14px',
+            borderTop: '1px solid rgba(255,255,255,0.05)',
+          }}>
+            {notionProject.created_time && (
+              <div>
+                <div style={{ fontSize: '10px', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>
+                  En Notion desde
+                </div>
+                <div style={{ fontSize: '12px', color: '#cbd5e0' }}>
+                  {fmtDate(notionProject.created_time)} · <span style={{ color: '#6b7280' }}>{fmtRelative(notionProject.created_time)}</span>
+                </div>
+              </div>
+            )}
+            {notionProject.last_edited_time && (
+              <div>
+                <div style={{ fontSize: '10px', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>
+                  Última edición Notion
+                </div>
+                <div style={{ fontSize: '12px', color: '#cbd5e0' }}>
+                  {fmtDate(notionProject.last_edited_time)} · <span style={{ color: daysSince(notionProject.last_edited_time)! > 14 ? '#f59e0b' : '#6b7280' }}>{fmtRelative(notionProject.last_edited_time)}</span>
+                </div>
+              </div>
+            )}
+            {notionProject.created_time && (
+              <div>
+                <div style={{ fontSize: '10px', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>
+                  Días en proyecto
+                </div>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#E8792F' }}>
+                  {daysSince(notionProject.created_time)} días
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Info util */}
         {notionProject.info_util && (
