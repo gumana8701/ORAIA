@@ -1,5 +1,4 @@
 import Sidebar from '@/components/Sidebar'
-import VoiceWidget from '@/components/VoiceWidget'
 import { ThemeProvider } from '@/lib/ThemeContext'
 import { getSessionProfile } from '@/lib/auth'
 
@@ -22,7 +21,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {children}
         </main>
       </div>
-      <VoiceWidget />
     </ThemeProvider>
   )
 }
