@@ -316,17 +316,13 @@ export default function PMBoardPage() {
                         )}
 
                         {/* Footer */}
-                        <div style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.07)',
-                        }}>
-                          <Initials names={project.responsable || []} />
-                          <MoveButtons
-                            etapaIdx={etapaIdx} isUpdating={isUpdating}
-                            onPrev={() => handleMoveEtapa(project, 'prev')}
-                            onNext={() => handleMoveEtapa(project, 'next')}
-                          />
-                        </div>
+                        {project.responsable?.length > 0 && (
+                          <div style={{
+                            paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.07)',
+                          }}>
+                            <Initials names={project.responsable} />
+                          </div>
+                        )}
                       </div>
                     </div>
                   )
