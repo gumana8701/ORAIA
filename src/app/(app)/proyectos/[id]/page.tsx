@@ -9,6 +9,7 @@ import ProjectKPIs from '@/components/ProjectKPIs'
 import ProjectKPIsEditor from '@/components/ProjectKPIsEditor'
 import NotionTasksTab from '@/components/NotionTasksTab'
 import Recap72h from '@/components/Recap72h'
+import ProjectChat from '@/components/ProjectChat'
 import { getSessionProfile } from '@/lib/auth'
 
 const nivelColor: Record<string, string> = {
@@ -84,12 +85,13 @@ export default async function ProyectoDetalle({
   const prevProject = navIdx > 0 ? navProjects[navIdx - 1] : null
   const nextProject = navIdx >= 0 && navIdx < navProjects.length - 1 ? navProjects[navIdx + 1] : null
 
+  const isAdmin = profile.rol === 'admin'
   const totalActivity = mensajes.length + meetingBriefs.length
   const tabs = [
     {key:'actividad',  label:`📋 Actividad${totalActivity>0?' ('+totalActivity+')':''}`},
-    {key:'alertas',    label:`⚠️ Alertas${alertas.length>0?' ('+alertas.length+')':''}`},
+    ...(isAdmin ? [{key:'alertas', label:`⚠️ Alertas${alertas.length>0?' ('+alertas.length+')':''}`}] : []),
     {key:'notion',     label:'📋 Notion'},
-    {key:'onboarding', label:'🚀 Onboarding'},
+    ...(isAdmin ? [{key:'onboarding', label:'🚀 Onboarding'}] : []),
     {key:'perfil',     label:'🎯 KPIs'},
   ]
 
@@ -272,6 +274,9 @@ export default async function ProyectoDetalle({
       {tab==='perfil' && (
         <ProjectKPIsEditor projectId={id} initialKpis={kpis} />
       )}
+
+      {/* PM Agent chat widget */}
+      <ProjectChat projectId={id} projectName={proyecto.nombre} />
     </div>
   )
 }

@@ -3,20 +3,22 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTheme } from '@/lib/ThemeContext'
 
-const nav = [
-  { href: '/insights',        label: 'Insights',   icon: '📊' },
-  { href: '/',                label: 'Proyectos',  icon: '📂' },
-  { href: '/alertas',         label: 'Alertas',    icon: '⚠️' },
-  { href: '/onboarding',      label: 'Onboarding', icon: '🚀' },
-  { href: '/admin/usuarios',      label: 'Usuarios',     icon: '🔐' },
-  { href: '/admin/notion-link',   label: 'Notion Link',  icon: '📋' },
-  { href: '/admin/pm-board',      label: 'PM Board',     icon: '📊' },
-  { href: '/admin/preview',       label: 'Ver como…',    icon: '👁️' },
+const allNav = [
+  { href: '/insights',            label: 'Insights',     icon: '📊', adminOnly: false },
+  { href: '/',                    label: 'Proyectos',    icon: '📂', adminOnly: false },
+  { href: '/alertas',             label: 'Alertas',      icon: '⚠️',  adminOnly: true  },
+  { href: '/onboarding',          label: 'Onboarding',   icon: '🚀', adminOnly: true  },
+  { href: '/admin/usuarios',      label: 'Usuarios',     icon: '🔐', adminOnly: true  },
+  { href: '/admin/notion-link',   label: 'Notion Link',  icon: '📋', adminOnly: false },
+  { href: '/admin/pm-board',      label: 'PM Board',     icon: '📊', adminOnly: false },
+  { href: '/admin/preview',       label: 'Ver como…',    icon: '👁️',  adminOnly: true  },
 ]
 
-export default function Sidebar() {
+export default function Sidebar({ role = 'developer' }: { role?: string }) {
   const pathname  = usePathname()
   const { theme, toggle } = useTheme()
+  const isAdmin = role === 'admin'
+  const nav = allNav.filter(item => !item.adminOnly || isAdmin)
   const isLight   = theme === 'light'
 
   return (

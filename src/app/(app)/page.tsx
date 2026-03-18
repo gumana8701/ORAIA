@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { Suspense } from 'react'
 import ProjectCard from '@/components/ProjectCard'
 import ProjectFilters from '@/components/ProjectFilters'
-import AIDigest72h from '@/components/AIDigest72h'
+
 import { Proyecto } from '@/lib/types'
 import { getSessionProfile, getAllowedProjectIds } from '@/lib/auth'
 import { redirect } from 'next/navigation'
@@ -153,11 +153,6 @@ export default async function Dashboard({
           </div>
         ))}
       </div>
-
-      {/* AI Digest — últimas 72h */}
-      <Suspense fallback={null}>
-        <AIDigest72h />
-      </Suspense>
 
       {/* Filters */}
       <div style={{ position: 'relative', zIndex: 1 }}>
