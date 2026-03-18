@@ -182,7 +182,29 @@ export default function PMBoardPage() {
     const noEtapa = filteredProjects.filter(p => !p.etapas?.length)
 
     return (
-      <div className="flex gap-3 overflow-x-auto pb-6" style={{ minHeight: '70vh' }}>
+      <div style={{
+        display: 'flex', gap: '12px',
+        overflowX: 'auto', overflowY: 'hidden',
+        paddingBottom: '16px', paddingTop: '4px',
+        minHeight: '70vh',
+        // Force visible scrollbar on all browsers
+        scrollbarWidth: 'thin',
+        scrollbarColor: '#E8792F #1e293b',
+        WebkitOverflowScrolling: 'touch',
+        cursor: 'grab',
+      }}
+      className="kanban-scroll"
+      onMouseDown={e => {
+        const el = e.currentTarget
+        el.style.cursor = 'grabbing'
+        const startX = e.pageX - el.offsetLeft
+        const scrollLeft = el.scrollLeft
+        const onMove = (ev: MouseEvent) => { el.scrollLeft = scrollLeft - (ev.pageX - el.offsetLeft - startX) }
+        const onUp = () => { el.style.cursor = 'grab'; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+        window.addEventListener('mousemove', onMove)
+        window.addEventListener('mouseup', onUp)
+      }}
+      >
         {[...columns, ...(noEtapa.length ? [{ etapa: 'Sin etapa', items: noEtapa }] : [])].map(col => {
           const c = ETAPA_COLORS[col.etapa] || DEFAULT_COLOR
           return (
@@ -399,6 +421,12 @@ export default function PMBoardPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'Inter, sans-serif' }}>
+      <style>{`
+        .kanban-scroll::-webkit-scrollbar { height: 8px; }
+        .kanban-scroll::-webkit-scrollbar-track { background: #1e293b; border-radius: 4px; }
+        .kanban-scroll::-webkit-scrollbar-thumb { background: #E8792F; border-radius: 4px; }
+        .kanban-scroll::-webkit-scrollbar-thumb:hover { background: #d4651f; }
+      `}</style>
       <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '32px 24px' }}>
 
         {/* Header */}
