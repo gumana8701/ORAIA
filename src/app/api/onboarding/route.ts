@@ -219,7 +219,7 @@ export async function POST(req: NextRequest) {
     const searchTerm = projectName.trim().substring(0, 15)
     const { data: welcomeCall } = await sb
       .from('meeting_briefs')
-      .select('id, title, drive_link, summary, action_items')
+      .select('id, title, drive_link, summary, action_items, decisions, transcript_raw')
       .ilike('title', `%${searchTerm}%`)
       .order('meeting_date', { ascending: false })
       .limit(1)
@@ -229,7 +229,69 @@ export async function POST(req: NextRequest) {
       // Link it to project if not already linked
       await sb.from('meeting_briefs').update({ project_id: projectId })
         .eq('id', welcomeCall.id)
-      results.welcomeCall = { found: true, title: welcomeCall.title }
+
+      // Extract company description, project objective and KPIs with Gemini
+      const geminiKey = process.env.GEMINI_API_KEY
+      if (geminiKey) {
+        try {
+          const content = [
+            welcomeCall.summary || '',
+            (welcomeCall.decisions || []).join('\n'),
+            (welcomeCall.action_items || []).join('\n'),
+            (welcomeCall.transcript_raw || '').substring(0, 6000),
+          ].filter(Boolean).join('\n\n')
+
+          const prompt = `Eres un asistente de operaciones de ORA AI. Analiza esta llamada de bienvenida con el cliente "${projectName}" y extrae:
+
+CONTENIDO:
+${content}
+
+Responde SOLO con JSON válido:
+{
+  "descripcion_empresa": "1-2 oraciones describiendo a qué se dedica el cliente/empresa",
+  "objetivo_proyecto": "1-2 oraciones explicando qué quiere lograr con este proyecto de IA",
+  "kpis_acordados": ["KPI 1 acordado", "KPI 2 acordado"]
+}`
+
+          const gemRes = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { temperature: 0.2, maxOutputTokens: 400 },
+              }),
+            }
+          )
+          const gemData = await gemRes.json()
+          const text = gemData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+          const jsonMatch = text.match(/\{[\s\S]*\}/)
+          if (jsonMatch) {
+            const extracted = JSON.parse(jsonMatch[0])
+            await sb.from('projects').update({
+              descripcion_empresa: extracted.descripcion_empresa || null,
+              objetivo_proyecto: extracted.objetivo_proyecto || null,
+              kpis_acordados: extracted.kpis_acordados || [],
+            }).eq('id', projectId)
+            results.welcomeCall = {
+              found: true,
+              title: welcomeCall.title,
+              extracted: {
+                descripcion: extracted.descripcion_empresa,
+                objetivo: extracted.objetivo_proyecto,
+                kpis: extracted.kpis_acordados?.length || 0,
+              }
+            }
+          } else {
+            results.welcomeCall = { found: true, title: welcomeCall.title }
+          }
+        } catch {
+          results.welcomeCall = { found: true, title: welcomeCall.title }
+        }
+      } else {
+        results.welcomeCall = { found: true, title: welcomeCall.title }
+      }
     } else {
       // Add to pending calls
       await sb.from('pending_calls').insert({

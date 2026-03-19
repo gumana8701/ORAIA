@@ -206,6 +206,43 @@ export default async function ProyectoDetalle({
       </div>
 
 
+      {/* Company info card — shown when available */}
+      {((proyecto as any).descripcion_empresa || (proyecto as any).objetivo_proyecto) && (
+        <div style={{
+          background: 'rgba(17,24,39,0.7)', border: '1px solid rgba(255,255,255,0.07)',
+          borderLeft: '3px solid rgba(232,121,47,0.5)', borderRadius: '10px',
+          padding: '14px 18px', marginBottom: '20px',
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px',
+        }}>
+          {(proyecto as any).descripcion_empresa && (
+            <div>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: '#E8792F', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>🏢 Empresa</div>
+              <p style={{ fontSize: '13px', color: '#cbd5e0', margin: 0, lineHeight: 1.5 }}>{(proyecto as any).descripcion_empresa}</p>
+            </div>
+          )}
+          {(proyecto as any).objetivo_proyecto && (
+            <div>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: '#E8792F', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>🎯 Objetivo</div>
+              <p style={{ fontSize: '13px', color: '#cbd5e0', margin: 0, lineHeight: 1.5 }}>{(proyecto as any).objetivo_proyecto}</p>
+            </div>
+          )}
+          {((proyecto as any).kpis_acordados?.length > 0) && (
+            <div style={{ gridColumn: '1 / -1' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: '#E8792F', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>📊 KPIs acordados</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {((proyecto as any).kpis_acordados as string[]).map((kpi: string, i: number) => (
+                  <span key={i} style={{
+                    fontSize: '11px', padding: '3px 10px', borderRadius: '20px',
+                    background: 'rgba(232,121,47,0.10)', color: '#E8792F',
+                    border: '1px solid rgba(232,121,47,0.2)',
+                  }}>{kpi}</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Tabs */}
       <div style={{display:'flex',gap:'4px',marginBottom:'20px',borderBottom:'1px solid rgba(255,255,255,0.06)',paddingBottom:'0'}}>
         {tabs.map(t => (
