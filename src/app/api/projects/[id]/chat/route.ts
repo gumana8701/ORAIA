@@ -144,7 +144,10 @@ export async function POST(
       }
     )
     const data = await res.json()
-    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
+    // gemini-2.5-flash may return thinking parts (thought: true) before the actual response
+    const parts: any[] = data?.candidates?.[0]?.content?.parts || []
+    const replyPart = parts.find((p: any) => !p.thought && p.text) || parts[0]
+    const reply = replyPart?.text?.trim()
     if (!reply) return NextResponse.json({ error: 'No response from AI', raw: data }, { status: 500 })
     return NextResponse.json({ reply })
   } catch (e: any) {
