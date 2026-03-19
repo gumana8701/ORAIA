@@ -12,7 +12,7 @@ const sb = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const GEMINI_KEY = process.env.GEMINI_API_KEY || 'AIzaSyCXasYSgKTdLX5mZLR0jFntO7HB0CUmWOw'
+const GEMINI_KEY = process.env.GEMINI_API_KEY || 'AIzaSyBjs8PfHpaQID7r_Wo7pcAeiEuLKnGKt5A'
 const CACHE_HOURS = 2
 
 async function generateRecap(projectId: string, projectName: string): Promise<{
@@ -101,7 +101,7 @@ NO menciones que eres IA. Responde en español.`
 
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

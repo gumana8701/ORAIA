@@ -82,7 +82,7 @@ async function readDocContent(fileId, accessToken) {
 async function gemini(prompt, retries = 5) {
   const res = await httpsRequest({
     hostname: 'generativelanguage.googleapis.com',
-    path: `/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+    path: `/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
     method: 'POST',
     headers: { 'Content-Type': 'application/json' }
   }, { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.1 } });
