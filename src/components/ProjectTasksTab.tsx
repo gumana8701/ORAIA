@@ -8,6 +8,7 @@ interface Task {
   completed: boolean
   status: string
   order_index: number
+  category: string | null
   assignee: string | null
   notes: string | null
 }
@@ -107,11 +108,25 @@ export default function ProjectTasksTab({ projectId }: { projectId: string }) {
         </div>
       </div>
 
-      {/* Task list */}
+      {/* Task list — grouped by category if multiple */}
+      {(() => {
+        const categories = [...new Set(tasks.map(t => t.category).filter(Boolean))]
+        const multiCategory = categories.length > 1
+        return null // rendered below
+      })()}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        {tasks.map((task, idx) => (
-          <div
-            key={task.id}
+        {tasks.map((task, idx) => {
+          const prevTask = tasks[idx - 1]
+          const showCategoryHeader = task.category && task.category !== prevTask?.category
+          const multiCat = [...new Set(tasks.map(t => t.category).filter(Boolean))].length > 1
+          return (
+          <div key={task.id + '-wrap'}>
+            {multiCat && showCategoryHeader && (
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#E8792F', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '12px 4px 6px', marginTop: idx > 0 ? '8px' : 0 }}>
+                {task.category === 'Agente de Voz' ? '🎙 Agente de Voz' : '💬 WhatsApp / Texto'}
+              </div>
+            )}
+            <div
             style={{
               display: 'flex', gap: '12px', alignItems: 'flex-start',
               padding: '12px 16px', borderRadius: '8px',
@@ -159,8 +174,10 @@ export default function ProjectTasksTab({ projectId }: { projectId: string }) {
             >
               {task.completed ? '✓' : ''}
             </button>
+            </div>
           </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

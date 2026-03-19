@@ -118,11 +118,14 @@ async function createSlackChannel(channelName: string, devNames: string[]): Prom
 
 export async function POST(req: NextRequest) {
   try {
-    const { projectName, projectType, notionProjectId, assignedDevs = [], slackChannelName } = await req.json()
+    const { projectName, projectTypes, notionProjectId, assignedDevs = [], slackChannelName } = await req.json()
 
     if (!projectName?.trim()) {
       return NextResponse.json({ error: 'projectName is required' }, { status: 400 })
     }
+
+    const types: string[] = Array.isArray(projectTypes) ? projectTypes : [projectTypes].filter(Boolean)
+    const projectType = types.join('+') || 'whatsapp' // 'voice', 'whatsapp', or 'voice+whatsapp'
 
     const results: Record<string, any> = {}
 
@@ -176,10 +179,22 @@ export async function POST(req: NextRequest) {
     // Delete existing tasks first
     await sb.from('project_tasks').delete().eq('project_id', projectId)
 
-    const taskList = projectType === 'voice' ? TASKS_VOICE : TASKS_WHATSAPP
-    const tasksToInsert = taskList.map((title, i) => ({
+    // Build task list based on selected types
+    let taskList: { title: string; category: string }[] = []
+    if (types.includes('voice')) {
+      taskList = [...taskList, ...TASKS_VOICE.map(t => ({ title: t, category: 'Agente de Voz' }))]
+    }
+    if (types.includes('whatsapp')) {
+      taskList = [...taskList, ...TASKS_WHATSAPP.map(t => ({ title: t, category: 'WhatsApp/Texto' }))]
+    }
+    if (taskList.length === 0) {
+      taskList = TASKS_WHATSAPP.map(t => ({ title: t, category: 'WhatsApp/Texto' }))
+    }
+
+    const tasksToInsert = taskList.map((t, i) => ({
       project_id: projectId,
-      title,
+      title: t.title,
+      category: t.category,
       order_index: i,
       completed: false,
       status: 'pendiente',

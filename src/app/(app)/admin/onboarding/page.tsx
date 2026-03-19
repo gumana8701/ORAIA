@@ -25,7 +25,7 @@ export default function OnboardingPage() {
 
   // Step 1
   const [projectName, setProjectName] = useState('')
-  const [projectType, setProjectType] = useState<'voice' | 'whatsapp' | ''>('')
+  const [projectTypes, setProjectTypes] = useState<string[]>([])
 
   // Step 2
   const [notionProjects, setNotionProjects] = useState<{ id: string; nombre: string }[]>([])
@@ -43,6 +43,10 @@ export default function OnboardingPage() {
     if (projectName) setSlackName(slugify(projectName))
   }, [projectName])
 
+  function toggleType(t: string) {
+    setProjectTypes(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])
+  }
+
   function toggleDev(name: string) {
     setSelectedDevs(prev => prev.includes(name) ? prev.filter(d => d !== name) : [...prev, name])
   }
@@ -55,7 +59,7 @@ export default function OnboardingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           projectName,
-          projectType,
+          projectTypes,
           notionProjectId: notionProjectId || null,
           assignedDevs: selectedDevs,
           slackChannelName: slackName,
@@ -73,7 +77,7 @@ export default function OnboardingPage() {
   }
 
   function reset() {
-    setStep(1); setProjectName(''); setProjectType('')
+    setStep(1); setProjectName(''); setProjectTypes([])
     setNotionProjectId(''); setSelectedDevs([]); setSlackName(''); setResult(null)
   }
 
@@ -149,44 +153,64 @@ export default function OnboardingPage() {
             </div>
           </div>
 
-          {/* Project type */}
+          {/* Project type — multi select */}
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '10px' }}>
-              TIPO DE PROYECTO
+            <label style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '6px' }}>
+              TIPO DE SERVICIOS <span style={{ color: '#475569', fontWeight: 400 }}>(puede ser ambos)</span>
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               {[
-                { type: 'voice' as const, icon: '🎙', title: 'Agente de Voz', desc: 'IVR, Callbot, Agente de voz' },
-                { type: 'whatsapp' as const, icon: '💬', title: 'WhatsApp / Texto', desc: 'Chatbot, Agente de texto' },
-              ].map(opt => (
-                <button
-                  key={opt.type}
-                  onClick={() => setProjectType(opt.type)}
-                  style={{
-                    padding: '16px', borderRadius: '10px', cursor: 'pointer', textAlign: 'left',
-                    background: projectType === opt.type ? 'rgba(232,121,47,0.12)' : 'rgba(255,255,255,0.03)',
-                    border: projectType === opt.type ? '2px solid #E8792F' : '1px solid rgba(255,255,255,0.08)',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  <div style={{ fontSize: '24px', marginBottom: '6px' }}>{opt.icon}</div>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: projectType === opt.type ? '#E8792F' : '#f1f5f9', marginBottom: '2px' }}>
-                    {opt.title}
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>{opt.desc}</div>
-                </button>
-              ))}
+                { type: 'voice', icon: '🎙', title: 'Agente de Voz', desc: 'IVR, Callbot, Agente de voz' },
+                { type: 'whatsapp', icon: '💬', title: 'WhatsApp / Texto', desc: 'Chatbot, Agente de texto' },
+              ].map(opt => {
+                const sel = projectTypes.includes(opt.type)
+                return (
+                  <button
+                    key={opt.type}
+                    onClick={() => toggleType(opt.type)}
+                    style={{
+                      padding: '16px', borderRadius: '10px', cursor: 'pointer', textAlign: 'left',
+                      background: sel ? 'rgba(232,121,47,0.12)' : 'rgba(255,255,255,0.03)',
+                      border: sel ? '2px solid #E8792F' : '1px solid rgba(255,255,255,0.08)',
+                      transition: 'all 0.15s', position: 'relative',
+                    }}
+                  >
+                    {sel && (
+                      <div style={{
+                        position: 'absolute', top: '8px', right: '10px',
+                        width: '16px', height: '16px', borderRadius: '50%',
+                        background: '#E8792F', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '9px', color: '#fff', fontWeight: 700,
+                      }}>✓</div>
+                    )}
+                    <div style={{ fontSize: '24px', marginBottom: '6px' }}>{opt.icon}</div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: sel ? '#E8792F' : '#f1f5f9', marginBottom: '2px' }}>
+                      {opt.title}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#64748b' }}>{opt.desc}</div>
+                  </button>
+                )
+              })}
             </div>
+            {projectTypes.length === 2 && (
+              <div style={{
+                marginTop: '8px', padding: '6px 10px', borderRadius: '6px',
+                background: 'rgba(232,121,47,0.08)', border: '1px solid rgba(232,121,47,0.2)',
+                fontSize: '11px', color: '#E8792F',
+              }}>
+                ✅ Se generarán las 20 tareas combinadas (10 voz + 10 WhatsApp)
+              </div>
+            )}
           </div>
 
           <button
             onClick={() => setStep(2)}
-            disabled={!projectName.trim() || !projectType}
+            disabled={!projectName.trim() || projectTypes.length === 0}
             style={{
               marginTop: '24px', width: '100%', padding: '12px', borderRadius: '8px',
               background: !projectName.trim() || !projectType ? 'rgba(255,255,255,0.06)' : '#E8792F',
               border: 'none', cursor: !projectName.trim() || !projectType ? 'not-allowed' : 'pointer',
-              color: !projectName.trim() || !projectType ? '#334155' : '#fff',
+              color: !projectName.trim() || projectTypes.length === 0 ? '#334155' : '#fff',
               fontSize: '14px', fontWeight: 600, transition: 'all 0.15s',
             }}
           >
@@ -327,7 +351,7 @@ export default function OnboardingPage() {
               <ResultItem
                 ok={(result.tasks?.created || 0) > 0}
                 title={`${result.tasks?.created || 0} tareas generadas`}
-                desc={`Checklist de ${projectType === 'voice' ? 'Agente de Voz' : 'WhatsApp/Texto'}`}
+                desc={`Checklist de ${projectTypes.includes('voice') && projectTypes.includes('whatsapp') ? 'Voz + WhatsApp' : projectTypes.includes('voice') ? 'Agente de Voz' : 'WhatsApp/Texto'}`}
               />
 
               {/* Slack */}
