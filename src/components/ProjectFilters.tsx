@@ -47,7 +47,7 @@ function Dropdown({
   }, [])
 
   return (
-    <div ref={ref} style={{ position: 'relative', minWidth: '170px' }}>
+    <div ref={ref} style={{ position: 'relative', minWidth: '170px', zIndex: open ? 9999 : 'auto' }}>
       {/* Trigger */}
       <button
         onClick={() => setOpen(o => !o)}
@@ -70,7 +70,7 @@ function Dropdown({
       {/* Dropdown panel */}
       {open && (
         <div style={{
-          position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 100,
+          position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 9999,
           background: 'rgba(10,15,30,0.98)',
           backdropFilter: 'blur(16px)',
           border: '1px solid rgba(255,255,255,0.10)',
