@@ -139,7 +139,7 @@ export async function POST(
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents,
-          generationConfig: { temperature: 0.4, maxOutputTokens: 600 },
+          generationConfig: { temperature: 0.4, maxOutputTokens: 1200 },
         }),
       }
     )

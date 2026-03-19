@@ -33,7 +33,10 @@ export default function ProjectChat({ projectId, projectName }: { projectId: str
   }, [open])
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const t = setTimeout(() => {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }, 50)
+    return () => clearTimeout(t)
   }, [messages, loading])
 
   async function send(text?: string) {

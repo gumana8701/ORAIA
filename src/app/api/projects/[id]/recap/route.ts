@@ -80,24 +80,21 @@ async function generateRecap(projectId: string, projectName: string): Promise<{
     `ALERTA [${a.nivel}]: ${a.tipo} — ${a.descripcion}`
   ).join('\n')
 
-  const prompt = `Eres un asistente de operations de ORA AI. Genera un brief detallado de las últimas 72 horas del proyecto "${projectName}".
+  const prompt = `Eres un asistente de operations de ORA AI. Genera un resumen MUY CORTO (máximo 3 líneas) de las últimas 72 horas del proyecto "${projectName}".
 
 DATOS DISPONIBLES:
+${msgSample ? `MENSAJES (${msg_count_72h} total):\n${msgSample}` : 'Sin mensajes en 72h.'}
+${briefSample ? `\nREUNIONES:\n${briefSample}` : ''}
+${alertSample ? `\nALERTAS:\n${alertSample}` : ''}
 
-${msgSample ? `MENSAJES WhatsApp/Slack (${msg_count_72h} total, mostrando últimos 30):\n${msgSample}` : 'Sin mensajes en 72h.'}
-${briefSample ? `\nREUNIONES/MEETS:\n${briefSample}` : '\nSin reuniones en 72h.'}
-${alertSample ? `\nALERTAS DETECTADAS:\n${alertSample}` : '\nSin alertas en 72h.'}
-
-Instrucciones para el brief:
-1. **Resumen ejecutivo** (2-3 oraciones): qué pasó en general, cómo está la comunicación
-2. **Estado del cliente** (1-2 oraciones): cómo se ve el cliente, si está activo, si tiene dudas/problemas
-3. **Temas clave tratados**: lista bullet de los temas principales que surgieron en los mensajes
-4. **Pendientes / Action items**: qué quedó pendiente, qué necesita seguimiento del equipo
-5. **Riesgos** (solo si hay): señales de alerta o fricción detectadas
-
-Formato: usa los emojis 📋 🤝 💬 ⚡ ⚠️ para los encabezados de cada sección.
-Tono: directo, operacional, como una nota de briefing para el equipo.
-NO menciones que eres IA. Responde en español.`
+INSTRUCCIONES ESTRICTAS:
+- Máximo 2-3 oraciones en total. Nada más.
+- Menciona solo lo más importante: qué pasó, si hay riesgo, qué está pendiente.
+- Si hay alertas, mencionarlas brevemente.
+- Tono: directo, como un titular de operaciones.
+- NO uses encabezados, NO uses bullets, NO uses emojis de sección.
+- Solo texto corrido, conciso.
+- Responde en español.`
 
   try {
     const res = await fetch(
@@ -107,7 +104,7 @@ NO menciones que eres IA. Responde en español.`
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 800 },
+          generationConfig: { temperature: 0.3, maxOutputTokens: 200 },
         }),
       }
     )
