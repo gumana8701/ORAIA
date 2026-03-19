@@ -208,8 +208,8 @@ export default function OnboardingPage() {
             disabled={!projectName.trim() || projectTypes.length === 0}
             style={{
               marginTop: '24px', width: '100%', padding: '12px', borderRadius: '8px',
-              background: !projectName.trim() || !projectType ? 'rgba(255,255,255,0.06)' : '#E8792F',
-              border: 'none', cursor: !projectName.trim() || !projectType ? 'not-allowed' : 'pointer',
+              background: !projectName.trim() || projectTypes.length === 0 ? 'rgba(255,255,255,0.06)' : '#E8792F',
+              border: 'none', cursor: !projectName.trim() || projectTypes.length === 0 ? 'not-allowed' : 'pointer',
               color: !projectName.trim() || projectTypes.length === 0 ? '#334155' : '#fff',
               fontSize: '14px', fontWeight: 600, transition: 'all 0.15s',
             }}
