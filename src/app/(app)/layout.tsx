@@ -11,7 +11,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div style={{ display: 'flex', minHeight: '100vh' }}>
         <Sidebar role={role} />
         <main
-          className="dot-bg"
+          className="dot-bg app-main"
           style={{
             flex: 1, minHeight: '100vh',
             padding: '40px 40px 40px 48px',

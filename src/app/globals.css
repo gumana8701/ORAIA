@@ -278,3 +278,68 @@ a { color: inherit; text-decoration: none; }
 [data-theme="light"] .status-en_riesgo { background: rgba(239,68,68,0.10);  color: #dc2626; border-color: rgba(239,68,68,0.25); }
 [data-theme="light"] .status-pausado   { background: rgba(107,114,128,0.10); color: #6b7280; border-color: rgba(107,114,128,0.2); }
 [data-theme="light"] .status-completado{ background: rgba(59,130,246,0.10); color: #2563eb; border-color: rgba(59,130,246,0.25); }
+
+/* ── Responsive Layout ────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .app-main {
+    padding: 72px 16px 80px 16px !important;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .app-main {
+    padding: 32px 24px 32px 32px !important;
+  }
+}
+
+/* ── Responsive Project Cards Grid ───────────────────────────── */
+@media (max-width: 768px) {
+  .projects-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .project-filters {
+    flex-direction: column !important;
+  }
+  .project-filters input {
+    max-width: 100% !important;
+  }
+}
+
+/* ── Responsive Project Page ─────────────────────────────────── */
+@media (max-width: 768px) {
+  .project-header-stats {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .project-company-card {
+    grid-template-columns: 1fr !important;
+  }
+  .meeting-brief-panel {
+    width: 100vw !important;
+  }
+}
+
+/* ── Responsive Tables / PM Board ────────────────────────────── */
+@media (max-width: 768px) {
+  .pm-kanban {
+    flex-direction: column !important;
+  }
+  .pm-kanban-col {
+    min-width: unset !important;
+    width: 100% !important;
+  }
+}
+
+/* ── Chat bubble position on mobile ──────────────────────────── */
+@media (max-width: 768px) {
+  .chat-bubble-btn {
+    bottom: 16px !important;
+    right: 16px !important;
+  }
+  .chat-window {
+    width: calc(100vw - 32px) !important;
+    right: 16px !important;
+    left: 16px !important;
+    height: 70vh !important;
+  }
+}

@@ -86,6 +86,7 @@ export default function ProjectChat({ projectId, projectName }: { projectId: str
       {/* Floating button */}
       <button
         onClick={() => setOpen(o => !o)}
+        className="chat-bubble-btn"
         style={{
           position: 'fixed', bottom: '24px', right: '24px', zIndex: 1000,
           width: '52px', height: '52px', borderRadius: '50%',
@@ -101,7 +102,7 @@ export default function ProjectChat({ projectId, projectName }: { projectId: str
 
       {/* Chat window */}
       {open && (
-        <div style={{
+        <div className="chat-window" style={{
           position: 'fixed', bottom: '88px', right: '24px', zIndex: 999,
           width: '380px', height: '520px',
           background: '#0f172a', border: '1px solid rgba(255,255,255,0.12)',

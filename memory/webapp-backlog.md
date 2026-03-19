@@ -1,94 +1,64 @@
 # ORAIA Webapp — Backlog de Features
 
-> Capturado 2026-03-19. Trabajar una a una, con contexto de Guillermo antes de implementar.
+> Capturado 2026-03-19. Actualizado misma fecha.
 
 ---
 
 ## 🔵 Héctor
-- [ ] **H1** — Canal Dedicado por proyecto
-- [ ] **H2** — Standarizar nombres (proyectos)
-- [ ] **H3** — Agregar el documento con el link de la reunión *(ya hay recording_url — revisar si es esto)*
-- [ ] **H4** — Estado total del proyecto: status en base a tareas + reuniones + delivery + estado Twilio + FAQs + si cliente es complicado/problemático → colocarlo dentro del agente
-- [ ] **H5** — Cantidad de servicios contratados
-- [ ] **H6** — Todos los de ORA son ops administradores (permisos)
+- [x] **H1** — Canal Dedicado por proyecto *(onboarding crea canal Slack automático — falta scope `groups:write` en Slack app)*
+- [x] **H2** — Standarizar nombres *(onboarding usa nombre exacto de WA como nombre del proyecto)*
+- [x] **H3** — Link de la reunión grabada *(recording_url en meeting briefs + botón ▶ en panel)*
+- [ ] **H4** — Estado total del proyecto (score con tareas + delivery + Twilio + FAQs + cliente difícil) — *complejo, próxima sesión*
+- [ ] **H5** — Cantidad de servicios contratados — *pendiente*
+- [ ] **H6** — Todos los de ORA = ops admins — *Guillermo lo hará manual (WhatsApp)*
 
 ---
 
 ## 🟠 Enzo
-- [ ] **E1** — Tareas y Sub Tareas
-- [ ] **E2** — Notificaciones de asignación
-- [ ] **E3** — Cada nuevo mensaje/reunión → agente analiza riesgo → envía alerta + mensaje Slack por canal del proyecto
-- [ ] **E4** — Tickets para solicitudes (ej: desbloqueo de tareas por pendientes dentro de las tareas)
-- [ ] **E5** — On Boarding
+- [x] **E1** — Tareas generadas automáticamente en onboarding (10 voz / 10 WA / 20 ambos)
+- [ ] **E2** — Notificaciones de asignación — *pendiente*
+- [ ] **E3** — Agente analiza cada msg/reunión → alerta + Slack por canal — *necesita groups:write primero*
+- [ ] **E4** — Tickets para solicitudes / desbloqueo de tareas — *pendiente*
+- [x] **E5** — Onboarding Wizard *(3 pasos: proyecto → equipo → resultado)*
 
 ---
 
 ## 🟢 Luca
-- [ ] **L1** — Filtrado de proyectos de acuerdo a asignación
-- [ ] **L2** — Tareas: filtrar por pendientes y completadas
-- [ ] **L3** — Arreglar visual en cel/tablet (responsive)
-- [ ] **L4** — Descripción de empresa + objetivo del proyecto (campo principal)
+- [ ] **L1** — Filtrado de proyectos por dev asignado — *pendiente*
+- [ ] **L2** — Tareas: filtrar pendientes/completadas — *tab Tareas existe, filtros pendientes*
+- [ ] **L3** — Responsive cel/tablet — *pendiente*
+- [x] **L4** — Descripción empresa + objetivo + KPIs extraídos por Gemini desde llamada de bienvenida
 
 ---
 
+## Pendiente técnico
+- Agregar scope `groups:write` en Slack app → habilita H1 completo y E3
+- GEMINI_API_KEY y SLACK_BOT_TOKEN en Vercel env vars
+
 ---
 
-## 📋 Task Templates (para onboarding)
+## 📋 Task Templates
 
-### Voz (IVR, Callbot, Agente de Voz)
-1. Recolección de requerimientos (objetivos y casos de uso)
-2. Configuración de número telefónico (Twilio u otro proveedor)
-3. Redacción y grabación de voces (o configuración de TTS)
-4. Diseño y configuración del flujo de llamadas (IVR, menú, transferencias)
-5. Integración con sistemas externos (CRM, bases de datos, APIs)
+### Voz
+1. Recolección de requerimientos
+2. Configuración número telefónico (Twilio)
+3. Redacción y grabación de voces (o TTS)
+4. Diseño flujo de llamadas (IVR)
+5. Integración sistemas externos
 6. Pruebas internas (QA)
 7. Pruebas con cliente
 8. Ajustes finales
-9. Go Live / Puesta en producción
+9. Go Live
 10. Monitoreo y soporte inicial
 
-### WhatsApp/Texto (Chatbot, Agente de Texto)
-1. Recolección de requerimientos (objetivos y casos de uso)
-2. Conexión del número de WhatsApp/SMS (configuración y verificación)
-3. Configuración del agente/chatbot (flujos conversacionales y respuestas automáticas)
-4. Integración con CRM o sistemas externos
-5. Configuración de AppLevel/permisos y accesos
+### WhatsApp/Texto
+1. Recolección de requerimientos
+2. Conexión número WhatsApp/SMS
+3. Configuración agente/chatbot
+4. Integración CRM o sistemas externos
+5. Configuración AppLevel/permisos
 6. Pruebas internas (QA)
 7. Pruebas con cliente
 8. Ajustes finales
-9. Go Live / Puesta en producción
+9. Go Live
 10. Monitoreo y soporte inicial
-
----
-
-## 🚀 Onboarding Wizard — Diseño
-
-### Flujo:
-1. Nombre exacto del grupo WhatsApp (required, copy-paste → vincula monitoreo)
-2. Tipo de proyecto: Voz | WhatsApp/Texto
-3. Notion project (dropdown de proyectos existentes)
-4. Developer(s) asignados (multi-select)
-5. Nombre canal Slack (auto-sugerido del nombre WA, editable)
-6. Click "Onboard" →
-   - Crea/actualiza proyecto en Supabase
-   - Crea canal Slack privado (Jennifer + Trina + Guille + Enzo + devs seleccionados)
-   - Genera tasks default según tipo
-   - Busca Welcome Call en Drive → extrae KPIs si encuentra
-   - Si no encuentra → agrega a "Llamadas Pendientes" (solo Enzo y Guillermo ven)
-
-### Solo pueden hacer onboarding: Enzo y Guillermo
-
-### Slack - falta scope `groups:write` (pendiente de agregar)
-
-### DB changes needed:
-- `project_tasks` table: id, project_id, title, status, completed, order, category
-- `pending_calls` table: id, project_id, title, drive_link, created_at
-- `projects` table: add `project_type` (voice/whatsapp), `slack_channel_id`
-
----
-
-## Estado
-- Total: 15 features
-- Completadas: 0
-- En progreso: 0
-- **Prioridad 1:** Onboarding Wizard (resuelve H1, H2, E1, E5, L4, parte de H4)
