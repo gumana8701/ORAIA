@@ -9,6 +9,7 @@ import ProjectKPIs from '@/components/ProjectKPIs'
 import ProjectKPIsEditor from '@/components/ProjectKPIsEditor'
 import NotionTasksTab from '@/components/NotionTasksTab'
 import ProjectChat from '@/components/ProjectChat'
+import ProjectTasksTab from '@/components/ProjectTasksTab'
 import { getSessionProfile } from '@/lib/auth'
 
 const nivelColor: Record<string, string> = {
@@ -89,6 +90,7 @@ export default async function ProyectoDetalle({
   const tabs = [
     {key:'actividad',  label:`📋 Actividad${totalActivity>0?' ('+totalActivity+')':''}`},
     ...(isAdmin ? [{key:'alertas', label:`⚠️ Alertas${alertas.length>0?' ('+alertas.length+')':''}`}] : []),
+    {key:'tareas',     label:'✅ Tareas'},
     {key:'notion',     label:'📋 Notion'},
     ...(isAdmin ? [{key:'onboarding', label:'🚀 Onboarding'}] : []),
     {key:'perfil',     label:'🎯 KPIs'},
@@ -245,6 +247,11 @@ export default async function ProyectoDetalle({
             </div>
           ))}
         </div>
+      )}
+
+      {/* Tab: Tareas */}
+      {activeTab==='tareas' && (
+        <ProjectTasksTab projectId={id} />
       )}
 
       {/* Tab: Notion */}
