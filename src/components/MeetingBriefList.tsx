@@ -7,6 +7,8 @@ interface MeetingBrief {
   title: string
   meeting_date: string
   drive_link: string | null
+  recording_url?: string | null
+  transcript_raw?: string | null
   summary: string | null
   decisions: string[]
   action_items: string[]

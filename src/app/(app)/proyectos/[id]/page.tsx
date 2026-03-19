@@ -51,7 +51,7 @@ async function getData(id: string, profileId?: string, profileRole?: string, dev
     sb.from('alerts').select('*').eq('project_id', id).eq('resuelta',false).order('created_at',{ascending:false}),
     sb.from('developers').select('*').eq('activo',true).order('es_supervisor',{ascending:false}),
     sb.from('project_developers').select('*, developer:developers(*)').eq('project_id', id),
-    sb.from('meeting_briefs').select('id,title,meeting_date,drive_link,summary,decisions,action_items,participants,ai_confidence').eq('project_id', id).order('meeting_date',{ascending:false}).limit(50),
+    sb.from('meeting_briefs').select('id,title,meeting_date,drive_link,recording_url,transcript_raw,summary,decisions,action_items,participants,ai_confidence').eq('project_id', id).order('meeting_date',{ascending:false}).limit(50),
     sb.from('project_kpis').select('id,kpi_text,categoria,meta,confirmado').eq('project_id', id).order('created_at',{ascending:true}),
     sb.from('notion_projects').select('id,etapas').eq('project_id', id).limit(1).maybeSingle(),
   ])

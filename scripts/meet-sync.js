@@ -1,10 +1,7 @@
 #!/usr/bin/env node
 /**
  * ORAIA Meet Sync
- * Scans Google Drive for Gemini Meet briefs → classifies to projects → stores in Supabase
- * 
- * Run: node scripts/meet-sync.js
- * Cron: runs automatically via systemd timer
+ * Scans Google Drive for Gemini Meet briefs → finds recording + transcript → classifies → stores in Supabase
  */
 
 require('dotenv').config({ path: '.env.local' });
@@ -83,11 +80,10 @@ async function getAccessToken() {
 // ─── Step 2: List Meet briefs from Drive ──────────────────────────────────────
 
 async function listMeetBriefs(accessToken) {
-  // Gemini Meet briefs are Google Docs with specific name patterns
   const query = encodeURIComponent(
-    "(name contains 'Notas de Gemini' or name contains 'Gemini Notes') and mimeType='application/vnd.google-apps.document' and trashed=false"
+    "(name contains 'Notas de Gemini' or name contains 'Gemini Notes' or name contains 'Notes by Gemini') and mimeType='application/vnd.google-apps.document' and trashed=false"
   );
-  const fields = encodeURIComponent('files(id,name,createdTime,modifiedTime,webViewLink)');
+  const fields = encodeURIComponent('files(id,name,createdTime,modifiedTime,webViewLink,parents)');
   const orderBy = encodeURIComponent('createdTime desc');
 
   const res = await httpsRequest({
@@ -100,7 +96,66 @@ async function listMeetBriefs(accessToken) {
   return res.body.files || [];
 }
 
-// ─── Step 3: Read brief content ───────────────────────────────────────────────
+// ─── Step 3: Find sibling files (recording + transcript) in same folder ───────
+
+async function findSiblingFiles(parentFolderId, meetingTitle, accessToken) {
+  if (!parentFolderId) return { recordingUrl: null, transcriptText: null };
+
+  // Get all files in the same folder
+  const query = encodeURIComponent(`'${parentFolderId}' in parents and trashed=false`);
+  const fields = encodeURIComponent('files(id,name,mimeType,webViewLink,webContentLink)');
+
+  const res = await httpsRequest({
+    hostname: 'www.googleapis.com',
+    path: `/drive/v3/files?q=${query}&fields=${fields}&pageSize=50`,
+    method: 'GET',
+    headers: { 'Authorization': `Bearer ${accessToken}` }
+  });
+
+  const files = res.body.files || [];
+  console.log(`  📁 Folder has ${files.length} files`);
+
+  let recordingUrl = null;
+  let transcriptText = null;
+
+  for (const file of files) {
+    const nameLower = file.name.toLowerCase();
+
+    // Recording: video/mp4 or file with "grabacion" / "recording" in name
+    if (
+      file.mimeType === 'video/mp4' ||
+      nameLower.includes('recording') ||
+      nameLower.includes('grabaci')
+    ) {
+      // Use webViewLink for Drive viewer, or direct link
+      recordingUrl = file.webViewLink || `https://drive.google.com/file/d/${file.id}/view`;
+      console.log(`  🎬 Recording found: ${file.name}`);
+    }
+
+    // Transcript: Google Doc with "transcript" or "transcripci" in name
+    if (
+      file.mimeType === 'application/vnd.google-apps.document' &&
+      (nameLower.includes('transcript') || nameLower.includes('transcripci'))
+    ) {
+      try {
+        const textRes = await httpsRequest({
+          hostname: 'www.googleapis.com',
+          path: `/drive/v3/files/${file.id}/export?mimeType=text/plain`,
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        transcriptText = typeof textRes.body === 'string' ? textRes.body : JSON.stringify(textRes.body);
+        console.log(`  📝 Transcript found: ${file.name} (${transcriptText.length} chars)`);
+      } catch (e) {
+        console.log(`  ⚠️ Could not read transcript: ${e.message}`);
+      }
+    }
+  }
+
+  return { recordingUrl, transcriptText };
+}
+
+// ─── Step 4: Read brief content ───────────────────────────────────────────────
 
 async function readDocContent(fileId, accessToken) {
   const res = await httpsRequest({
@@ -112,7 +167,7 @@ async function readDocContent(fileId, accessToken) {
   return typeof res.body === 'string' ? res.body : JSON.stringify(res.body);
 }
 
-// ─── Step 4: Classify with Gemini ─────────────────────────────────────────────
+// ─── Step 5: Classify with Gemini ─────────────────────────────────────────────
 
 async function classifyWithGemini(briefContent, briefName, projects) {
   const projectList = projects.map(p => `- ID: ${p.id} | Nombre: ${p.nombre}`).join('\n');
@@ -164,12 +219,12 @@ Responde SOLO con JSON válido con esta estructura exacta:
   }
 }
 
-// ─── Step 5: Store in Supabase ────────────────────────────────────────────────
+// ─── Step 6: Store in Supabase ────────────────────────────────────────────────
 
-async function storeBrief(brief, classification, driveFileId, driveLink, meetingDate) {
+async function storeBrief(briefName, classification, driveFileId, driveLink, meetingDate, rawContent, recordingUrl, transcriptText) {
   const record = {
     drive_file_id: driveFileId,
-    title: brief,
+    title: briefName,
     meeting_date: meetingDate,
     drive_link: driveLink,
     project_id: classification?.project_id || null,
@@ -177,24 +232,38 @@ async function storeBrief(brief, classification, driveFileId, driveLink, meeting
     decisions: classification?.decisions || [],
     action_items: classification?.action_items || [],
     participants: classification?.participants || [],
-    ai_confidence: classification?.confidence || 0
+    ai_confidence: classification?.confidence || 0,
+    transcript_raw: rawContent ? rawContent.substring(0, 50000) : null,
+    recording_url: recordingUrl || null,
+    ...(transcriptText ? { transcript_text: transcriptText.substring(0, 100000) } : {})
   };
 
   const res = await supabase('POST', '/rest/v1/meeting_briefs', record);
   return res;
 }
 
-// ─── Step 6: Get already-processed briefs ─────────────────────────────────────
+// ─── Step 7: Update existing brief with recording/transcript ──────────────────
 
-async function getProcessedIds() {
-  const res = await supabase('GET', '/rest/v1/meeting_briefs?select=drive_file_id');
-  if (Array.isArray(res.body)) {
-    return new Set(res.body.map(r => r.drive_file_id));
-  }
-  return new Set();
+async function updateBriefMedia(briefId, recordingUrl, transcriptText) {
+  const patch = {};
+  if (recordingUrl) patch.recording_url = recordingUrl;
+  if (transcriptText) patch.transcript_text = transcriptText.substring(0, 100000);
+  if (Object.keys(patch).length === 0) return;
+
+  await supabase('PATCH', `/rest/v1/meeting_briefs?id=eq.${briefId}`, patch);
 }
 
-// ─── Step 7: Get projects for classification ──────────────────────────────────
+// ─── Step 8: Get already-processed briefs ─────────────────────────────────────
+
+async function getProcessedBriefs() {
+  const res = await supabase('GET', '/rest/v1/meeting_briefs?select=id,drive_file_id,recording_url');
+  if (Array.isArray(res.body)) {
+    return res.body;
+  }
+  return [];
+}
+
+// ─── Step 9: Get projects for classification ──────────────────────────────────
 
 async function getProjects() {
   const res = await supabase('GET', '/rest/v1/projects?select=id,nombre&order=ultima_actividad.desc&limit=100');
@@ -218,41 +287,70 @@ async function main() {
       return;
     }
 
-    const processedIds = await getProcessedIds();
-    const newBriefs = briefs.filter(b => !processedIds.has(b.id));
-    console.log(`🆕 ${newBriefs.length} new briefs to process`);
+    const processedBriefs = await getProcessedBriefs();
+    const processedIds = new Set(processedBriefs.map(b => b.drive_file_id));
 
-    if (newBriefs.length === 0) {
-      console.log('All briefs already processed. Nothing to do.');
-      return;
-    }
+    // Also find existing briefs missing recording_url to backfill
+    const missingRecording = processedBriefs.filter(b => !b.recording_url);
+    const newBriefs = briefs.filter(b => !processedIds.has(b.id));
+
+    console.log(`🆕 ${newBriefs.length} new briefs to process`);
+    console.log(`🔄 ${missingRecording.length} existing briefs missing recording URL`);
 
     const projects = await getProjects();
     console.log(`📁 Loaded ${projects.length} projects for classification`);
 
+    // Process new briefs
     for (const brief of newBriefs) {
       console.log(`\n📄 Processing: ${brief.name}`);
-      
+
       const content = await readDocContent(brief.id, accessToken);
+
+      // Find recording + transcript in same folder
+      const parentFolderId = brief.parents?.[0] || null;
+      const { recordingUrl, transcriptText } = await findSiblingFiles(parentFolderId, brief.name, accessToken);
+
       const classification = await classifyWithGemini(content, brief.name, projects);
-      
+
       if (classification) {
         const matchedProject = projects.find(p => p.id === classification.project_id);
         console.log(`  → Project: ${matchedProject?.nombre || 'No match'} (confidence: ${(classification.confidence * 100).toFixed(0)}%)`);
       }
 
-      const storeRes = await storeBrief(brief.name, classification, brief.id, brief.webViewLink, brief.createdTime);
+      if (recordingUrl) console.log(`  → Recording: ${recordingUrl}`);
+      if (transcriptText) console.log(`  → Transcript: ${transcriptText.length} chars`);
+
+      const storeRes = await storeBrief(
+        brief.name, classification, brief.id, brief.webViewLink,
+        brief.createdTime, content, recordingUrl, transcriptText
+      );
+
       if (storeRes.status >= 200 && storeRes.status < 300) {
         console.log(`  ✅ Stored`);
       } else {
         console.log(`  ❌ Store failed (${storeRes.status}):`, JSON.stringify(storeRes.body));
       }
 
-      // Rate limit: free tier = 15 req/min → 4s between calls
       await new Promise(r => setTimeout(r, 4200));
     }
 
-    console.log(`\n✅ Sync complete. Processed ${newBriefs.length} new briefs.`);
+    // Backfill recording URLs for existing briefs (check the first 10 missing ones)
+    const toBackfill = missingRecording.slice(0, 10);
+    if (toBackfill.length > 0) {
+      console.log(`\n🔄 Backfilling recording URLs for ${toBackfill.length} briefs...`);
+      for (const existing of toBackfill) {
+        const driveFile = briefs.find(b => b.id === existing.drive_file_id);
+        if (!driveFile?.parents?.[0]) continue;
+        const { recordingUrl, transcriptText } = await findSiblingFiles(driveFile.parents[0], driveFile.name, accessToken);
+        if (recordingUrl || transcriptText) {
+          await updateBriefMedia(existing.id, recordingUrl, transcriptText);
+          console.log(`  ✅ Updated: ${driveFile.name}`);
+        }
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    }
+
+    console.log(`\n✅ Sync complete.`);
 
   } catch (err) {
     console.error('❌ Sync error:', err.message);
