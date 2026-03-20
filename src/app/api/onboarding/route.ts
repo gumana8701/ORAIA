@@ -304,6 +304,35 @@ Responde SOLO con JSON válido:
       results.welcomeCall = { found: false, addedToPending: true }
     }
 
+    // ── 6. Send welcome message to Slack channel ──────────────────────────
+    if (slackResult.id) {
+      const typeLabel = types.includes('voice') && types.includes('whatsapp')
+        ? '🎙 Agente de Voz + 💬 WhatsApp'
+        : types.includes('voice') ? '🎙 Agente de Voz' : '💬 WhatsApp / Texto'
+
+      const taskLines = taskList.slice(0, 5).map((t, i) => `${i + 1}. ${t.title}`).join('\n')
+      const extraTasks = taskList.length > 5 ? `\n_...y ${taskList.length - 5} tareas más_` : ''
+
+      const welcomeMsg = [
+        `👋 *¡Bienvenidos al proyecto ${projectName.trim()}!*`,
+        ``,
+        `Este canal es el espacio oficial del equipo para coordinar, hacer seguimiento y resolver dudas sobre este proyecto.`,
+        ``,
+        `*Tipo de proyecto:* ${typeLabel}`,
+        ``,
+        `*Tareas iniciales a completar:*`,
+        taskLines + extraTasks,
+        ``,
+        `¡Manos a la obra! 🚀 Cualquier actualización de tarea o comentario aparecerá aquí.`,
+      ].join('\n')
+
+      await slackPost('chat.postMessage', {
+        channel: slackResult.id,
+        text: welcomeMsg,
+      })
+      results.welcomeSlack = { sent: true }
+    }
+
     return NextResponse.json({
       success: true,
       projectId,
