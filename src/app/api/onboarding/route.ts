@@ -204,7 +204,30 @@ export async function POST(req: NextRequest) {
     const { data: tasks, error: taskErr } = await sb.from('project_tasks').insert(tasksToInsert).select('id')
     results.tasks = { created: tasks?.length || 0, error: taskErr?.message || null }
 
-    // ── 4. Create Slack channel ────────────────────────────────────────────
+    // ── 4. Assign developers in project_developers ────────────────────────
+    const { data: allDevs } = await sb.from('developers').select('id, nombre').eq('activo', true)
+    if (allDevs && assignedDevs.length > 0) {
+      // Always include Enzo as supervisor
+      const enzo = allDevs.find(d => d.nombre.toLowerCase().includes('enzo'))
+      const devsToAssign: { project_id: string; developer_id: string; rol: string }[] = []
+
+      if (enzo) devsToAssign.push({ project_id: projectId, developer_id: enzo.id, rol: 'supervisor' })
+
+      for (const devName of assignedDevs) {
+        const firstWord = devName.split(' ')[0].toLowerCase()
+        const match = allDevs.find(d => d.nombre.toLowerCase().includes(firstWord))
+        if (match && match.id !== enzo?.id) {
+          devsToAssign.push({ project_id: projectId, developer_id: match.id, rol: 'developer' })
+        }
+      }
+
+      if (devsToAssign.length > 0) {
+        await sb.from('project_developers').upsert(devsToAssign, { onConflict: 'project_id,developer_id' })
+      }
+      results.developers = { assigned: devsToAssign.length }
+    }
+
+    // ── 5. Create Slack channel ──────────────────────────────────────────
     const channelSlug = slackChannelName || projectName.trim()
     const slackResult = await createSlackChannel(channelSlug, assignedDevs)
 
@@ -216,7 +239,7 @@ export async function POST(req: NextRequest) {
     }
     results.slack = slackResult
 
-    // ── 5. Search for welcome call ─────────────────────────────────────────
+    // ── 6. Search for welcome call ─────────────────────────────────────────
     const searchTerm = projectName.trim().substring(0, 15)
     const { data: welcomeCall } = await sb
       .from('meeting_briefs')

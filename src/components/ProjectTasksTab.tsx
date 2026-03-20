@@ -288,8 +288,8 @@ export default function ProjectTasksTab({ projectId, canAddTasks = false }: { pr
           borderRadius: '12px', padding: '14px 16px', marginBottom: '16px',
           display: 'flex', gap: '12px', alignItems: 'center',
         }}>
-          {/* Progress — 60% */}
-          <div style={{ flex: '0 0 60%' }}>
+          {/* Progress — grows to fill */}
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
               <span style={{ fontSize: '12px', fontWeight: 700, color: '#f1f5f9' }}>Progreso</span>
               <span style={{ fontSize: '12px', fontWeight: 700, color: pct === 100 ? '#22c55e' : '#E8792F' }}>
@@ -306,8 +306,8 @@ export default function ProjectTasksTab({ projectId, canAddTasks = false }: { pr
             </div>
           </div>
 
-          {/* Filters — 25% */}
-          <div style={{ flex: '0 0 25%', display: 'flex', gap: '6px', justifyContent: 'center' }}>
+          {/* Filters — fixed */}
+          <div style={{ flexShrink: 0, display: 'flex', gap: '6px', justifyContent: 'center' }}>
             {([
               { key: 'all',   label: 'Todos' },
               ...(hasVoice ? [{ key: 'voice', label: '🎙 Voz' }] : []),
@@ -328,8 +328,8 @@ export default function ProjectTasksTab({ projectId, canAddTasks = false }: { pr
             ))}
           </div>
 
-          {/* Add task — 15% */}
-          <div style={{ flex: '0 0 15%', display: 'flex', justifyContent: 'flex-end' }}>
+          {/* Add task — fixed */}
+          <div style={{ flexShrink: 0 }}>
             {canAddTasks && !addingTask && (
               <button
                 onClick={() => setAddingTask(true)}
