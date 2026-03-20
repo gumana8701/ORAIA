@@ -371,6 +371,24 @@ Responde SOLO con JSON válido:
       results.welcomeSlack = { sent: true }
     }
 
+    // ── 7. Create KPI missing alert (fires after 6h business hours) ───────
+    // Use the Slack channel from this onboarding or from existing project record
+    const slackChanId = slackResult?.id || null
+    const sendAfter6h = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString()
+    const { data: alertCreated } = await sb.from('alerts').insert({
+      project_id: projectId,
+      alert_type: 'kpi_missing',
+      title: `KPIs no definidos — ${projectName.trim()}`,
+      status: 'pending',
+      slack_channel_id: slackChanId || null,
+      send_after: sendAfter6h,
+      send_count: 0,
+      max_sends: 10,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).select('id').single()
+    results.alert = { created: true, id: alertCreated?.id, sendAfter: sendAfter6h }
+
     return NextResponse.json({
       success: true,
       projectId,
