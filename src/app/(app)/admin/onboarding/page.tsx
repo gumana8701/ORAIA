@@ -28,16 +28,8 @@ export default function OnboardingPage() {
   const [projectTypes, setProjectTypes] = useState<string[]>([])
 
   // Step 2
-  const [notionProjects, setNotionProjects] = useState<{ id: string; nombre: string }[]>([])
-  const [notionProjectId, setNotionProjectId] = useState('')
   const [selectedDevs, setSelectedDevs] = useState<string[]>([])
   const [slackName, setSlackName] = useState('')
-
-  useEffect(() => {
-    fetch('/api/notion/projects-list').then(r => r.json()).then(d => {
-      if (Array.isArray(d)) setNotionProjects(d)
-    }).catch(() => {})
-  }, [])
 
   useEffect(() => {
     if (projectName) setSlackName(slugify(projectName))
@@ -60,7 +52,7 @@ export default function OnboardingPage() {
         body: JSON.stringify({
           projectName,
           projectTypes,
-          notionProjectId: notionProjectId || null,
+          notionProjectId: null,
           assignedDevs: selectedDevs,
           slackChannelName: slackName,
         }),
@@ -78,7 +70,7 @@ export default function OnboardingPage() {
 
   function reset() {
     setStep(1); setProjectName(''); setProjectTypes([])
-    setNotionProjectId(''); setSelectedDevs([]); setSlackName(''); setResult(null)
+    setSelectedDevs([]); setSlackName(''); setResult(null)
   }
 
   const card = {
@@ -94,7 +86,7 @@ export default function OnboardingPage() {
           🚀 Onboarding de Proyecto
         </h1>
         <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
-          Configura un nuevo proyecto y conéctalo a WhatsApp, Slack, Notion y tareas en un solo paso.
+          Configura un nuevo proyecto y conéctalo a WhatsApp, Slack y tareas en un solo paso.
         </p>
       </div>
 
@@ -226,28 +218,6 @@ export default function OnboardingPage() {
             Equipo y conexiones
           </h2>
 
-          {/* Notion */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '6px' }}>
-              PROYECTO EN NOTION (opcional)
-            </label>
-            <select
-              value={notionProjectId}
-              onChange={e => setNotionProjectId(e.target.value)}
-              style={{
-                width: '100%', boxSizing: 'border-box',
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
-                borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#f1f5f9',
-                outline: 'none',
-              }}
-            >
-              <option value="">— Sin vincular —</option>
-              {notionProjects.map(n => (
-                <option key={n.id} value={n.id}>{n.nombre}</option>
-              ))}
-            </select>
-          </div>
-
           {/* Devs */}
           <div style={{ marginBottom: '20px' }}>
             <label style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '8px' }}>
@@ -372,7 +342,7 @@ export default function OnboardingPage() {
                 warn={!result.welcomeCall?.found}
               />
 
-              {/* Notion */}
+              {/* Notion se vincula desde /admin/notion-link cuando corresponda */}
               {result.notion && (
                 <ResultItem ok={true} title="Notion vinculado" />
               )}
