@@ -288,7 +288,7 @@ export default async function ProyectoDetalle({
 
       {/* Tab: Tareas */}
       {activeTab==='tareas' && (
-        <ProjectTasksTab projectId={id} />
+        <ProjectTasksTab projectId={id} canAddTasks={isAdmin || profile.rol === 'supervisor'} />
       )}
 
       {/* Tab: Notion */}
