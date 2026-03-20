@@ -213,6 +213,7 @@ export default function ProjectTasksTab({ projectId, canAddTasks = false }: { pr
   const [addingTask, setAddingTask] = useState(false)
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [savingTask, setSavingTask] = useState(false)
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'voice' | 'chat'>('all')
 
   useEffect(() => {
     fetch(`/api/projects/${projectId}/tasks`)
@@ -224,6 +225,16 @@ export default function ProjectTasksTab({ projectId, canAddTasks = false }: { pr
   const completed = tasks.filter(t => t.status === 'completado' || t.completed).length
   const total = tasks.length
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0
+
+  const hasVoice = tasks.some(t => t.category === 'Agente de Voz')
+  const hasChat  = tasks.some(t => t.category === 'WhatsApp/Texto')
+  const multiCat = hasVoice && hasChat
+
+  const filteredTasks = tasks.filter(t => {
+    if (categoryFilter === 'voice') return t.category === 'Agente de Voz'
+    if (categoryFilter === 'chat')  return t.category === 'WhatsApp/Texto'
+    return true
+  })
 
   function handleStatusChange(taskId: string, newStatus: Task['status']) {
     setTasks(prev => prev.map(t =>
@@ -262,100 +273,111 @@ export default function ProjectTasksTab({ projectId, canAddTasks = false }: { pr
   return (
     <>
       <div>
-        {/* Progress bar */}
+        {/* ── Top bar: 60% progress | 25% filters | 15% add task ── */}
         <div style={{
           background: 'rgba(17,24,39,0.8)', border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: '12px', padding: '16px 20px', marginBottom: '16px',
+          borderRadius: '12px', padding: '14px 16px', marginBottom: '16px',
+          display: 'flex', gap: '12px', alignItems: 'center',
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: '#f1f5f9' }}>
-              Progreso del proyecto
-            </span>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: pct === 100 ? '#22c55e' : '#E8792F' }}>
-              {completed}/{total} · {pct}%
-            </span>
+          {/* Progress — 60% */}
+          <div style={{ flex: '0 0 60%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#f1f5f9' }}>Progreso</span>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: pct === 100 ? '#22c55e' : '#E8792F' }}>
+                {completed}/{total} · {pct}%
+              </span>
+            </div>
+            <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', borderRadius: '3px', transition: 'width 0.4s ease',
+                width: `${pct}%`,
+                background: pct === 100 ? '#22c55e' : 'linear-gradient(90deg, #E8792F, #f59e0b)',
+              }} />
+            </div>
           </div>
-          <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
-            <div style={{
-              height: '100%', borderRadius: '3px', transition: 'width 0.4s ease',
-              width: `${pct}%`,
-              background: pct === 100 ? '#22c55e' : 'linear-gradient(90deg, #E8792F, #f59e0b)',
-            }} />
-          </div>
-          {/* Status summary pills */}
-          <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
-            {(Object.entries(STATUS_CONFIG) as [Task['status'], typeof STATUS_CONFIG[keyof typeof STATUS_CONFIG]][]).map(([key, c]) => {
-              const count = tasks.filter(t => (t.status || 'pendiente') === key).length
-              if (count === 0) return null
-              return (
-                <span key={key} style={{
-                  fontSize: '11px', padding: '2px 8px', borderRadius: '20px',
-                  background: c.bg, color: c.color, fontWeight: 600, border: `1px solid ${c.dot}33`,
-                }}>
-                  {c.label}: {count}
-                </span>
-              )
-            })}
-          </div>
-        </div>
 
-        {/* Add task button */}
-        {canAddTasks && (
-          <div style={{ marginBottom: '12px' }}>
-            {!addingTask ? (
+          {/* Filters — 25% */}
+          <div style={{ flex: '0 0 25%', display: 'flex', gap: '4px', justifyContent: 'center' }}>
+            {([
+              { key: 'all',   label: 'Todos' },
+              ...(hasVoice ? [{ key: 'voice', label: '🎙 Voz' }] : []),
+              ...(hasChat  ? [{ key: 'chat',  label: '💬 Chat' }] : []),
+            ] as { key: typeof categoryFilter; label: string }[]).map(f => (
+              <button
+                key={f.key}
+                onClick={() => setCategoryFilter(f.key)}
+                style={{
+                  padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 600,
+                  cursor: 'pointer', border: 'none',
+                  background: categoryFilter === f.key ? '#E8792F' : 'rgba(255,255,255,0.06)',
+                  color: categoryFilter === f.key ? '#fff' : '#64748b',
+                  transition: 'all 0.15s',
+                }}
+              >{f.label}</button>
+            ))}
+          </div>
+
+          {/* Add task — 15% */}
+          <div style={{ flex: '0 0 15%', display: 'flex', justifyContent: 'flex-end' }}>
+            {canAddTasks && !addingTask && (
               <button
                 onClick={() => setAddingTask(true)}
                 style={{
-                  padding: '8px 16px', borderRadius: '8px', cursor: 'pointer',
-                  background: 'rgba(232,121,47,0.1)', border: '1px dashed rgba(232,121,47,0.4)',
-                  color: '#E8792F', fontSize: '13px', fontWeight: 600,
+                  padding: '5px 10px', borderRadius: '6px', cursor: 'pointer',
+                  background: 'rgba(232,121,47,0.12)', border: '1px dashed rgba(232,121,47,0.4)',
+                  color: '#E8792F', fontSize: '11px', fontWeight: 700, whiteSpace: 'nowrap',
                 }}
-              >
-                + Agregar tarea
-              </button>
-            ) : (
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <input
-                  autoFocus
-                  type="text"
-                  value={newTaskTitle}
-                  onChange={e => setNewTaskTitle(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') addTask(); if (e.key === 'Escape') setAddingTask(false) }}
-                  placeholder="Nombre de la nueva tarea..."
-                  style={{
-                    flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(232,121,47,0.4)',
-                    borderRadius: '8px', padding: '8px 12px', fontSize: '13px', color: '#f1f5f9', outline: 'none',
-                  }}
-                />
-                <button onClick={addTask} disabled={savingTask || !newTaskTitle.trim()} style={{ padding: '8px 14px', borderRadius: '8px', background: '#E8792F', border: 'none', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
-                  {savingTask ? '...' : '✓'}
-                </button>
-                <button onClick={() => setAddingTask(false)} style={{ padding: '8px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.06)', border: 'none', color: '#64748b', fontSize: '13px', cursor: 'pointer' }}>
-                  ✕
-                </button>
-              </div>
+              >+ Tarea</button>
             )}
+          </div>
+        </div>
+
+        {/* Add task input row */}
+        {canAddTasks && addingTask && (
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+            <input
+              autoFocus
+              type="text"
+              value={newTaskTitle}
+              onChange={e => setNewTaskTitle(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') addTask(); if (e.key === 'Escape') setAddingTask(false) }}
+              placeholder="Nombre de la nueva tarea..."
+              style={{
+                flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(232,121,47,0.4)',
+                borderRadius: '8px', padding: '8px 12px', fontSize: '13px', color: '#f1f5f9', outline: 'none',
+              }}
+            />
+            <button onClick={addTask} disabled={savingTask || !newTaskTitle.trim()} style={{ padding: '8px 14px', borderRadius: '8px', background: '#E8792F', border: 'none', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+              {savingTask ? '...' : '✓'}
+            </button>
+            <button onClick={() => setAddingTask(false)} style={{ padding: '8px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.06)', border: 'none', color: '#64748b', fontSize: '13px', cursor: 'pointer' }}>
+              ✕
+            </button>
           </div>
         )}
 
-        {/* Task list */}
+        {/* Task list — grouped by category */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {tasks.length === 0 && (
             <div style={{ textAlign: 'center', padding: '32px', color: '#334155', fontSize: '13px' }}>
               Sin tareas. Completa el onboarding para generarlas.
             </div>
           )}
-          {tasks.map((task, idx) => {
-            const prevTask = tasks[idx - 1]
-            const showCategoryHeader = task.category && task.category !== prevTask?.category
-            const multiCat = [...new Set(tasks.map(t => t.category).filter(Boolean))].length > 1
+          {filteredTasks.map((task, idx) => {
+            const prevTask = filteredTasks[idx - 1]
+            const showCategoryHeader = multiCat && task.category && task.category !== prevTask?.category
             const status = (task.status || 'pendiente') as Task['status']
             const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.pendiente
 
             return (
               <div key={task.id}>
-                {multiCat && showCategoryHeader && (
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#E8792F', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '10px 4px 5px', marginTop: idx > 0 ? '6px' : 0 }}>
+                {showCategoryHeader && (
+                  <div style={{
+                    fontSize: '11px', fontWeight: 700, color: '#E8792F',
+                    textTransform: 'uppercase', letterSpacing: '0.06em',
+                    padding: '14px 4px 6px', marginTop: idx > 0 ? '4px' : 0,
+                    borderTop: idx > 0 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                  }}>
                     {task.category === 'Agente de Voz' ? '🎙 Agente de Voz' : '💬 WhatsApp / Texto'}
                   </div>
                 )}

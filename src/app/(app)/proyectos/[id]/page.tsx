@@ -190,19 +190,29 @@ export default async function ProyectoDetalle({
           )}
         </div>
 
-        {/* Developers assigned */}
-        {assignedDevs.length > 0 && (
-          <div style={{display:'flex',gap:'8px',marginTop:'14px',flexWrap:'wrap',alignItems:'center'}}>
-            <span style={{fontSize:'12px',color:'#4a5568'}}>Equipo:</span>
-            {assignedDevs.map((d:any) => (
-              <span key={d.id} style={{
-                fontSize:'12px', padding:'3px 10px', borderRadius:'6px',
-                background:`${d.color}15`, color:d.color,
-                border:`1px solid ${d.color}30`, fontWeight:600,
-              }}>{d.emoji} {d.nombre}</span>
+        {/* Team — always show CS + Operaciones */}
+        <div style={{display:'flex',gap:'16px',marginTop:'14px',flexWrap:'wrap',alignItems:'flex-start'}}>
+          {/* CS */}
+          <div style={{display:'flex',gap:'6px',alignItems:'center',flexWrap:'wrap'}}>
+            <span style={{fontSize:'10px',fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.05em',marginRight:'2px'}}>CS</span>
+            {[{nombre:'Jennifer Serrano',emoji:'💼',color:'#6366f1'},{nombre:'Trina Gomez',emoji:'🌟',color:'#8b5cf6'}].map(p => (
+              <span key={p.nombre} style={{fontSize:'12px',padding:'3px 10px',borderRadius:'6px',background:`${p.color}15`,color:p.color,border:`1px solid ${p.color}30`,fontWeight:600}}>
+                {p.emoji} {p.nombre}
+              </span>
             ))}
           </div>
-        )}
+          {/* Operaciones */}
+          {assignedDevs.length > 0 && (
+            <div style={{display:'flex',gap:'6px',alignItems:'center',flexWrap:'wrap'}}>
+              <span style={{fontSize:'10px',fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.05em',marginRight:'2px'}}>OPS</span>
+              {assignedDevs.map((d:any) => (
+                <span key={d.id} style={{fontSize:'12px',padding:'3px 10px',borderRadius:'6px',background:`${d.color}15`,color:d.color,border:`1px solid ${d.color}30`,fontWeight:600}}>
+                  {d.emoji} {d.nombre}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
 
