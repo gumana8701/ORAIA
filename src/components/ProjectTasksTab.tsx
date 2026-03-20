@@ -290,7 +290,7 @@ export default function ProjectTasksTab({ projectId, canAddTasks = false }: { pr
         }}>
           {/* Progress — 60% */}
           <div style={{ flex: '0 0 60%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
               <span style={{ fontSize: '12px', fontWeight: 700, color: '#f1f5f9' }}>Progreso</span>
               <span style={{ fontSize: '12px', fontWeight: 700, color: pct === 100 ? '#22c55e' : '#E8792F' }}>
                 {completed}/{total} · {pct}%
