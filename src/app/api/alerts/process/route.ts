@@ -35,7 +35,8 @@ async function slackPost(method: string, body: Record<string, any>) {
 async function sendKpiAlert(alert: any, isFollowUp = false): Promise<string | null> {
   const { data: proj } = await sb.from('projects').select('nombre').eq('id', alert.project_id).single()
   const nombre = proj?.nombre || 'Proyecto'
-  const kpiUrl = `${APP_URL}/proyectos/${alert.project_id}?tab=kpis`
+  const kpiPath = `/proyectos/${alert.project_id}?tab=kpis`
+  const kpiUrl  = `${APP_URL}/login?next=${encodeURIComponent(kpiPath)}`
 
   const header = isFollowUp
     ? `📊 *Recordatorio #${alert.send_count + 1}* — KPIs pendientes`

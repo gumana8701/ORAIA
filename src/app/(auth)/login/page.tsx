@@ -1,14 +1,16 @@
 'use client'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense } from 'react'
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
-  const router = useRouter()
+  const searchParams = useSearchParams()
+  const next = searchParams.get('next') || '/'
   const sb = createClient()
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -19,8 +21,8 @@ export default function LoginPage() {
       setError(error.message)
       setLoading(false)
     } else {
-      // Full page reload ensures middleware reads the new session cookie correctly
-      window.location.href = '/'
+      // Redirect to intended destination after login
+      window.location.href = next
     }
   }
 
@@ -120,5 +122,13 @@ export default function LoginPage() {
         </form>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   )
 }
