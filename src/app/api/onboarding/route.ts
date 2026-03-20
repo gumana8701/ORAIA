@@ -66,7 +66,8 @@ async function findSlackUserIds(devNames: string[]): Promise<string[]> {
     const data = await slackGet('users.list', { limit: '200' })
     if (!data.ok) return []
     const members = data.members || []
-    const allNames = [...CORE_MEMBERS, ...devNames.map(d => d.toLowerCase())]
+    // Split each dev name into words so "Kevin ORA IA" matches "kevin carrillo"
+    const allNames = [...CORE_MEMBERS, ...devNames.flatMap(d => d.toLowerCase().split(/\s+/))]
     const ids: string[] = []
     for (const user of members) {
       if (user.is_bot || user.deleted) continue
