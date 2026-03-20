@@ -442,57 +442,65 @@ export default function ProjectTasksTab({ projectId, canAddTasks = false }: { pr
                   </div>
                 )}
                 <div
-                  onClick={() => setSelectedTask(task)}
                   style={{
-                    display: 'flex', gap: '12px', alignItems: 'center',
-                    padding: '11px 14px', borderRadius: '8px', cursor: 'pointer',
+                    padding: '10px 14px', borderRadius: '8px',
                     background: task.completed ? 'rgba(34,197,94,0.04)' : 'rgba(17,24,39,0.8)',
                     border: `1px solid ${task.completed ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.07)'}`,
-                    transition: 'all 0.15s',
+                    transition: 'border-color 0.15s',
                   }}
                   onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(232,121,47,0.3)')}
                   onMouseLeave={e => (e.currentTarget.style.borderColor = task.completed ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.07)')}
                 >
-                  {/* Step number */}
-                  <div style={{
-                    width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0,
-                    background: task.completed ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.06)',
-                    border: `1px solid ${task.completed ? 'rgba(34,197,94,0.4)' : 'rgba(255,255,255,0.12)'}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '10px', fontWeight: 700,
-                    color: task.completed ? '#22c55e' : '#475569',
-                  }}>
-                    {task.completed ? '✓' : idx + 1}
+                  {/* Row top: number + title + status + arrow */}
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center', cursor: 'pointer' }} onClick={() => setSelectedTask(task)}>
+                    <div style={{
+                      width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0,
+                      background: task.completed ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.06)',
+                      border: `1px solid ${task.completed ? 'rgba(34,197,94,0.4)' : 'rgba(255,255,255,0.12)'}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '10px', fontWeight: 700,
+                      color: task.completed ? '#22c55e' : '#475569',
+                    }}>
+                      {task.completed ? '✓' : idx + 1}
+                    </div>
+                    <span style={{ flex: 1, fontSize: '13px', color: task.completed ? '#475569' : '#e2e8f0', textDecoration: task.completed ? 'line-through' : 'none', lineHeight: 1.4 }}>
+                      {task.title}
+                    </span>
+                    <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '20px', background: cfg.bg, color: cfg.color, fontWeight: 600, border: `1px solid ${cfg.dot}44`, flexShrink: 0 }}>
+                      {cfg.label}
+                    </span>
+                    <span style={{ color: '#334155', fontSize: '12px', flexShrink: 0 }}>›</span>
                   </div>
 
-                  {/* Title */}
-                  <span style={{
-                    flex: 1, fontSize: '13px',
-                    color: task.completed ? '#475569' : '#e2e8f0',
-                    textDecoration: task.completed ? 'line-through' : 'none',
-                    lineHeight: 1.5,
-                  }}>
-                    {task.title}
-                  </span>
-
-                  {/* Assignee */}
-                  {task.assignee && (
-                    <span style={{ fontSize: '11px', color: '#64748b', flexShrink: 0, maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      👤 {task.assignee.split('/')[0].trim()}
-                    </span>
-                  )}
-
-                  {/* Status badge */}
-                  <span style={{
-                    fontSize: '10px', padding: '2px 7px', borderRadius: '20px',
-                    background: cfg.bg, color: cfg.color, fontWeight: 600,
-                    border: `1px solid ${cfg.dot}44`, flexShrink: 0,
-                  }}>
-                    {cfg.label}
-                  </span>
-
-                  {/* Arrow */}
-                  <span style={{ color: '#334155', fontSize: '12px', flexShrink: 0 }}>›</span>
+                  {/* Row bottom: assignee selector */}
+                  <div style={{ marginTop: '7px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '11px', color: '#475569', flexShrink: 0 }}>👤</span>
+                    <select
+                      value={task.assignee || ''}
+                      onClick={e => e.stopPropagation()}
+                      onChange={async e => {
+                        e.stopPropagation()
+                        const newAssignee = e.target.value || null
+                        await fetch(`/api/projects/${projectId}/tasks`, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ taskId: task.id, assignee: newAssignee }),
+                        })
+                        setTasks(prev => prev.map(t => t.id === task.id ? { ...t, assignee: newAssignee } : t))
+                        if (selectedTask?.id === task.id) setSelectedTask({ ...task, assignee: newAssignee })
+                      }}
+                      style={{
+                        background: 'transparent', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.12)',
+                        color: task.assignee ? '#94a3b8' : '#475569', fontSize: '11px', cursor: 'pointer',
+                        outline: 'none', padding: '1px 2px',
+                      }}
+                    >
+                      <option value="" style={{ background: '#1e293b', color: '#94a3b8' }}>— Sin asignar —</option>
+                      {['Enzo ORA IA','Héctor Ramirez','Victor Ramirez','Brenda Cruz','Kevin ORA IA','Luca Fonzo','Jennifer Serrano','Trina Gomez'].map(n => (
+                        <option key={n} value={n} style={{ background: '#1e293b', color: '#f1f5f9' }}>{n}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
             )
