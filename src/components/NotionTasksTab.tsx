@@ -556,16 +556,18 @@ export default function NotionTasksTab({ projectId }: { projectId: string }) {
             <div key={section} style={{ marginBottom: '12px' }}>
               {Object.keys(sections).length > 1 && (
                 <div style={{
-                  fontSize: '11px', fontWeight: 700, color: '#4a5568',
+                  fontSize: '11px', fontWeight: 700, color: '#94a3b8',
                   textTransform: 'uppercase', letterSpacing: '0.05em',
                   marginBottom: '6px', paddingBottom: '4px',
-                  borderBottom: '1px solid rgba(255,255,255,0.04)',
+                  borderBottom: '1px solid rgba(255,255,255,0.08)',
                 }}>{section}</div>
               )}
               {sectionTasks.map(t => (
                 <div key={t.id} style={{
                   display: 'flex', alignItems: 'flex-start', gap: '8px',
-                  padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.03)',
+                  padding: '7px 10px', borderRadius: '6px', marginBottom: '2px',
+                  background: t.checked ? 'rgba(34,197,94,0.05)' : 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.05)',
                 }}>
                   <span style={{
                     fontSize: '14px', flexShrink: 0, marginTop: '1px',
@@ -574,7 +576,7 @@ export default function NotionTasksTab({ projectId }: { projectId: string }) {
                     {t.checked ? '☑️' : '☐'}
                   </span>
                   <span style={{
-                    fontSize: '13px', color: t.checked ? '#4a5568' : '#cbd5e0',
+                    fontSize: '13px', color: t.checked ? '#64748b' : '#e2e8f0',
                     textDecoration: t.checked ? 'line-through' : 'none',
                     lineHeight: 1.5,
                   }}>
