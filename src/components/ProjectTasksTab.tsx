@@ -230,11 +230,20 @@ export default function ProjectTasksTab({ projectId, canAddTasks = false }: { pr
   const hasChat  = tasks.some(t => t.category === 'WhatsApp/Texto')
   const multiCat = hasVoice && hasChat
 
-  const filteredTasks = tasks.filter(t => {
-    if (categoryFilter === 'voice') return t.category === 'Agente de Voz'
-    if (categoryFilter === 'chat')  return t.category === 'WhatsApp/Texto'
-    return true
-  })
+  const filteredTasks = tasks
+    .filter(t => {
+      if (categoryFilter === 'voice') return t.category === 'Agente de Voz'
+      if (categoryFilter === 'chat')  return t.category === 'WhatsApp/Texto'
+      return true
+    })
+    .sort((a, b) => {
+      // Group by category first: Agente de Voz → WhatsApp/Texto → null
+      const catOrder = (c: string | null) =>
+        c === 'Agente de Voz' ? 0 : c === 'WhatsApp/Texto' ? 1 : 2
+      const catDiff = catOrder(a.category) - catOrder(b.category)
+      if (catDiff !== 0) return catDiff
+      return (a.order_index ?? 0) - (b.order_index ?? 0)
+    })
 
   function handleStatusChange(taskId: string, newStatus: Task['status']) {
     setTasks(prev => prev.map(t =>
@@ -297,7 +306,7 @@ export default function ProjectTasksTab({ projectId, canAddTasks = false }: { pr
           </div>
 
           {/* Filters — 25% */}
-          <div style={{ flex: '0 0 25%', display: 'flex', gap: '4px', justifyContent: 'center' }}>
+          <div style={{ flex: '0 0 25%', display: 'flex', gap: '6px', justifyContent: 'center' }}>
             {([
               { key: 'all',   label: 'Todos' },
               ...(hasVoice ? [{ key: 'voice', label: '🎙 Voz' }] : []),
@@ -307,10 +316,11 @@ export default function ProjectTasksTab({ projectId, canAddTasks = false }: { pr
                 key={f.key}
                 onClick={() => setCategoryFilter(f.key)}
                 style={{
-                  padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 600,
-                  cursor: 'pointer', border: 'none',
+                  padding: '5px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 600,
+                  cursor: 'pointer', border: '1px solid transparent',
                   background: categoryFilter === f.key ? '#E8792F' : 'rgba(255,255,255,0.06)',
-                  color: categoryFilter === f.key ? '#fff' : '#64748b',
+                  borderColor: categoryFilter === f.key ? '#E8792F' : 'rgba(255,255,255,0.10)',
+                  color: categoryFilter === f.key ? '#fff' : '#94a3b8',
                   transition: 'all 0.15s',
                 }}
               >{f.label}</button>
@@ -323,11 +333,11 @@ export default function ProjectTasksTab({ projectId, canAddTasks = false }: { pr
               <button
                 onClick={() => setAddingTask(true)}
                 style={{
-                  padding: '5px 10px', borderRadius: '6px', cursor: 'pointer',
-                  background: 'rgba(232,121,47,0.12)', border: '1px dashed rgba(232,121,47,0.4)',
+                  padding: '5px 12px', borderRadius: '6px', cursor: 'pointer',
+                  background: 'rgba(232,121,47,0.12)', border: '1px solid rgba(232,121,47,0.35)',
                   color: '#E8792F', fontSize: '11px', fontWeight: 700, whiteSpace: 'nowrap',
                 }}
-              >+ Tarea</button>
+              >+ Agregar Tarea</button>
             )}
           </div>
         </div>
