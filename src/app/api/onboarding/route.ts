@@ -189,10 +189,10 @@ export async function POST(req: NextRequest) {
     await sb.from('project_tasks').delete().eq('project_id', projectId)
 
     // Determine specialist and integrator from assignedDevs
-    const specialist = assignedDevs.find(n =>
+    const specialist = assignedDevs.find((n: string) =>
       SPECIALIST_KEYWORDS.some(k => n.toLowerCase().includes(k))
     ) || null
-    const integrator = assignedDevs.find(n =>
+    const integrator = assignedDevs.find((n: string) =>
       INTEGRATOR_KEYWORDS.some(k => n.toLowerCase().includes(k))
     ) || null
 

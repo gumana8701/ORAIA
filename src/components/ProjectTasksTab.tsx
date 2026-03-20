@@ -36,9 +36,11 @@ function timeAgo(iso: string) {
 
 // ── Task Drawer ───────────────────────────────────────────────────────────────
 function TaskDrawer({
-  task, projectId, onClose, onStatusChange,
+  task, projectId, onClose, onStatusChange, onAssigneeChange,
 }: {
-  task: Task; projectId: string; onClose: () => void; onStatusChange: (taskId: string, status: Task['status']) => void
+  task: Task; projectId: string; onClose: () => void
+  onStatusChange: (taskId: string, status: Task['status']) => void
+  onAssigneeChange: (taskId: string, assignee: string | null) => void
 }) {
   const [comments, setComments] = useState<Comment[]>([])
   const [newComment, setNewComment] = useState('')
@@ -125,8 +127,7 @@ function TaskDrawer({
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ taskId: task.id, assignee: newAssignee }),
                   })
-                  setSelectedTask({ ...task, assignee: newAssignee })
-                  setTasks(prev => prev.map(t => t.id === task.id ? { ...t, assignee: newAssignee } : t))
+                  onAssigneeChange(task.id, newAssignee)
                 }}
                 style={{
                   width: '100%', background: '#fff', border: '1px solid #e2e8f0',
@@ -134,7 +135,7 @@ function TaskDrawer({
                 }}
               >
                 <option value="">— Sin asignar —</option>
-                {['Enzo ORA IA','Héctor Ramirez','Victor Ramirez','Brenda Cruz','Kevin ORA IA','Luca Fonzo','Jennifer Serrano','Trina Gomez'].map(n => (
+                {(['Enzo ORA IA','Héctor Ramirez','Victor Ramirez','Brenda Cruz','Kevin ORA IA','Luca Fonzo','Jennifer Serrano','Trina Gomez'] as string[]).map(n => (
                   <option key={n} value={n} style={{ color: '#111827' }}>{n}</option>
                 ))}
               </select>
@@ -283,9 +284,12 @@ export default function ProjectTasksTab({ projectId, canAddTasks = false }: { pr
     setTasks(prev => prev.map(t =>
       t.id === taskId ? { ...t, status: newStatus, completed: newStatus === 'completado' } : t
     ))
-    if (selectedTask?.id === taskId) {
-      setSelectedTask(prev => prev ? { ...prev, status: newStatus, completed: newStatus === 'completado' } : null)
-    }
+    setSelectedTask(prev => prev?.id === taskId ? { ...prev, status: newStatus, completed: newStatus === 'completado' } : prev)
+  }
+
+  function handleAssigneeChange(taskId: string, assignee: string | null) {
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, assignee } : t))
+    setSelectedTask(prev => prev?.id === taskId ? { ...prev, assignee } : prev)
   }
 
   async function addTask() {
@@ -515,6 +519,7 @@ export default function ProjectTasksTab({ projectId, canAddTasks = false }: { pr
           projectId={projectId}
           onClose={() => setSelectedTask(null)}
           onStatusChange={handleStatusChange}
+          onAssigneeChange={handleAssigneeChange}
         />
       )}
     </>

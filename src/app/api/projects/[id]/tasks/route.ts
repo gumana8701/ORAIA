@@ -108,9 +108,9 @@ export async function PATCH(
   // Fetch current task state
   const { data: current } = await sb
     .from('project_tasks')
-    .select('title, status, status_changed_at, time_pendiente_seconds, time_bloqueado_seconds, time_completado_seconds')
+    .select('title, status, status_changed_at, time_pendiente_seconds, time_bloqueado_seconds, time_completado_seconds, started_at')
     .eq('id', taskId)
-    .single()
+    .single() as { data: { title: string; status: string; status_changed_at: string | null; started_at: string | null; time_pendiente_seconds: number; time_bloqueado_seconds: number; time_completado_seconds: number } | null }
 
   const now = new Date()
   const patch: Record<string, any> = { updated_at: now.toISOString() }
@@ -124,7 +124,7 @@ export async function PATCH(
     patch.status = newStatus
     patch.completed = newStatus === 'completado'
     if (newStatus === 'completado') patch.completed_at = now.toISOString()
-    if (newStatus === 'en progreso' && !current?.started_at) patch.started_at = now.toISOString()
+    if (newStatus === 'en_progreso' && !current?.started_at) patch.started_at = now.toISOString()
     patch.status_changed_at = now.toISOString()
   }
   if (notes !== undefined) patch.notes = notes
