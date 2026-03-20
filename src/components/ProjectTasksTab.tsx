@@ -290,17 +290,18 @@ export default function ProjectTasksTab({ projectId, canAddTasks = false }: { pr
         }}>
           {/* Progress — 60% */}
           <div style={{ flex: '0 0 60%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
               <span style={{ fontSize: '12px', fontWeight: 700, color: '#f1f5f9' }}>Progreso</span>
               <span style={{ fontSize: '12px', fontWeight: 700, color: pct === 100 ? '#22c55e' : '#E8792F' }}>
                 {completed}/{total} · {pct}%
               </span>
             </div>
-            <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+            <div style={{ height: '8px', borderRadius: '4px', background: 'rgba(255,255,255,0.12)', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)' }}>
               <div style={{
-                height: '100%', borderRadius: '3px', transition: 'width 0.4s ease',
-                width: `${pct}%`,
+                height: '100%', borderRadius: '4px', transition: 'width 0.4s ease',
+                width: pct > 0 ? `${pct}%` : '0%',
                 background: pct === 100 ? '#22c55e' : 'linear-gradient(90deg, #E8792F, #f59e0b)',
+                minWidth: pct > 0 ? '8px' : '0',
               }} />
             </div>
           </div>
