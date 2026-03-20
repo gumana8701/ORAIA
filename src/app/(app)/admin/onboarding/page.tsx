@@ -28,8 +28,16 @@ export default function OnboardingPage() {
   const [projectTypes, setProjectTypes] = useState<string[]>([])
 
   // Step 2
+  const [notionProjects, setNotionProjects] = useState<{ id: string; nombre: string }[]>([])
+  const [notionProjectId, setNotionProjectId] = useState('')
   const [selectedDevs, setSelectedDevs] = useState<string[]>([])
   const [slackName, setSlackName] = useState('')
+
+  useEffect(() => {
+    fetch('/api/notion/projects-list').then(r => r.json()).then(d => {
+      if (Array.isArray(d)) setNotionProjects(d)
+    }).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (projectName) setSlackName(slugify(projectName))
@@ -52,7 +60,7 @@ export default function OnboardingPage() {
         body: JSON.stringify({
           projectName,
           projectTypes,
-          notionProjectId: null,
+          notionProjectId: notionProjectId || null,
           assignedDevs: selectedDevs,
           slackChannelName: slackName,
         }),
@@ -70,7 +78,7 @@ export default function OnboardingPage() {
 
   function reset() {
     setStep(1); setProjectName(''); setProjectTypes([])
-    setSelectedDevs([]); setSlackName(''); setResult(null)
+    setNotionProjectId(''); setSelectedDevs([]); setSlackName(''); setResult(null)
   }
 
   const card = {
@@ -86,7 +94,7 @@ export default function OnboardingPage() {
           🚀 Onboarding de Proyecto
         </h1>
         <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
-          Configura un nuevo proyecto y conéctalo a WhatsApp, Slack y tareas en un solo paso.
+          Configura un nuevo proyecto y conéctalo a WhatsApp, Slack, Notion y tareas en un solo paso.
         </p>
       </div>
 
@@ -218,6 +226,33 @@ export default function OnboardingPage() {
             Equipo y conexiones
           </h2>
 
+          {/* Notion — REQUIRED */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '6px' }}>
+              PROYECTO EN NOTION <span style={{ color: '#f87171' }}>*</span>
+            </label>
+            <select
+              value={notionProjectId}
+              onChange={e => setNotionProjectId(e.target.value)}
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                background: '#fff', border: '1px solid rgba(255,255,255,0.20)',
+                borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#111827',
+                outline: 'none',
+              }}
+            >
+              <option value="" style={{ color: '#6b7280' }}>— Selecciona el proyecto en Notion —</option>
+              {notionProjects.map(n => (
+                <option key={n.id} value={n.id} style={{ color: '#111827' }}>{n.nombre}</option>
+              ))}
+            </select>
+            {!notionProjectId && (
+              <p style={{ fontSize: '11px', color: '#f87171', margin: '5px 0 0' }}>
+                ⚠️ Debes vincular un proyecto de Notion para continuar
+              </p>
+            )}
+          </div>
+
           {/* Devs */}
           <div style={{ marginBottom: '20px' }}>
             <label style={{ fontSize: '12px', fontWeight: 600, color: '#94a3b8', display: 'block', marginBottom: '8px' }}>
@@ -285,12 +320,12 @@ export default function OnboardingPage() {
             </button>
             <button
               onClick={submit}
-              disabled={loading}
+              disabled={loading || !notionProjectId}
               style={{
                 flex: 2, padding: '12px', borderRadius: '8px',
-                background: loading ? 'rgba(255,255,255,0.06)' : '#E8792F',
-                border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
-                color: loading ? '#334155' : '#fff', fontSize: '14px', fontWeight: 700,
+                background: loading || !notionProjectId ? 'rgba(255,255,255,0.06)' : '#E8792F',
+                border: 'none', cursor: loading || !notionProjectId ? 'not-allowed' : 'pointer',
+                color: loading || !notionProjectId ? '#334155' : '#fff', fontSize: '14px', fontWeight: 700,
               }}
             >
               {loading ? '⟳ Procesando...' : '🚀 Hacer Onboarding'}
