@@ -12,7 +12,7 @@ const allNav = [
   { href: '/admin/usuarios',      label: 'Usuarios',     icon: '🔐', adminOnly: true  },
   { href: '/admin/notion-link',   label: 'Notion Link',  icon: '📋', adminOnly: false },
   { href: '/admin/pm-board',      label: 'PM Board',     icon: '📊', adminOnly: false },
-  { href: '/admin/health',        label: 'Health Check', icon: '🔍', adminOnly: true  },
+  { href: '/admin/health',        label: 'Health Check', icon: '🔍', adminOnly: false },
   { href: '/admin/preview',       label: 'Ver como…',    icon: '👁️',  adminOnly: true  },
 ]
 
