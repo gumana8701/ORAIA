@@ -108,9 +108,15 @@ function TaskDrawer({
           display: 'flex', alignItems: 'flex-start', gap: '12px',
         }}>
           <div style={{ flex: 1 }}>
-            <h2 style={{ fontSize: '15px', fontWeight: 700, color: '#f1f5f9', margin: '0 0 10px', lineHeight: 1.4 }}>
+            <h2 style={{ fontSize: '15px', fontWeight: 700, color: '#f1f5f9', margin: '0 0 6px', lineHeight: 1.4 }}>
               {task.title}
             </h2>
+            {/* Assignee */}
+            {task.assignee && (
+              <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 10px' }}>
+                👤 {task.assignee}
+              </p>
+            )}
             {/* Status selector */}
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               {(Object.entries(STATUS_CONFIG) as [Task['status'], typeof STATUS_CONFIG[keyof typeof STATUS_CONFIG]][]).map(([key, c]) => (
@@ -212,8 +218,14 @@ export default function ProjectTasksTab({ projectId, canAddTasks = false }: { pr
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [addingTask, setAddingTask] = useState(false)
   const [newTaskTitle, setNewTaskTitle] = useState('')
+  const [newTaskAssignee, setNewTaskAssignee] = useState('')
   const [savingTask, setSavingTask] = useState(false)
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'voice' | 'chat'>('all')
+
+  const TEAM = [
+    'Enzo ORA IA', 'Héctor Ramirez', 'Victor Ramirez', 'Brenda Cruz',
+    'Kevin ORA IA', 'Luca Fonzo', 'Jennifer Serrano', 'Trina Gomez',
+  ]
 
   useEffect(() => {
     fetch(`/api/projects/${projectId}/tasks`)
@@ -260,12 +272,13 @@ export default function ProjectTasksTab({ projectId, canAddTasks = false }: { pr
     const res = await fetch(`/api/projects/${projectId}/tasks`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: newTaskTitle.trim(), author: 'Equipo' }),
+      body: JSON.stringify({ title: newTaskTitle.trim(), assignee: newTaskAssignee || null, author: 'Equipo' }),
     })
     const data = await res.json()
     if (data.id) {
       setTasks(prev => [...prev, data])
       setNewTaskTitle('')
+      setNewTaskAssignee('')
       setAddingTask(false)
     }
     setSavingTask(false)
@@ -345,7 +358,7 @@ export default function ProjectTasksTab({ projectId, canAddTasks = false }: { pr
 
         {/* Add task input row */}
         {canAddTasks && addingTask && (
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px', padding: '12px', borderRadius: '8px', background: 'rgba(232,121,47,0.06)', border: '1px solid rgba(232,121,47,0.2)' }}>
             <input
               autoFocus
               type="text"
@@ -354,16 +367,30 @@ export default function ProjectTasksTab({ projectId, canAddTasks = false }: { pr
               onKeyDown={e => { if (e.key === 'Enter') addTask(); if (e.key === 'Escape') setAddingTask(false) }}
               placeholder="Nombre de la nueva tarea..."
               style={{
-                flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(232,121,47,0.4)',
+                width: '100%', boxSizing: 'border-box',
+                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
                 borderRadius: '8px', padding: '8px 12px', fontSize: '13px', color: '#f1f5f9', outline: 'none',
               }}
             />
-            <button onClick={addTask} disabled={savingTask || !newTaskTitle.trim()} style={{ padding: '8px 14px', borderRadius: '8px', background: '#E8792F', border: 'none', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
-              {savingTask ? '...' : '✓'}
-            </button>
-            <button onClick={() => setAddingTask(false)} style={{ padding: '8px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.06)', border: 'none', color: '#64748b', fontSize: '13px', cursor: 'pointer' }}>
-              ✕
-            </button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <select
+                value={newTaskAssignee}
+                onChange={e => setNewTaskAssignee(e.target.value)}
+                style={{
+                  flex: 1, background: '#fff', border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: '8px', padding: '7px 12px', fontSize: '13px', color: '#111827', outline: 'none',
+                }}
+              >
+                <option value="">— Asignar a... —</option>
+                {TEAM.map(name => <option key={name} value={name} style={{ color: '#111827' }}>{name}</option>)}
+              </select>
+              <button onClick={addTask} disabled={savingTask || !newTaskTitle.trim()} style={{ padding: '8px 16px', borderRadius: '8px', background: '#E8792F', border: 'none', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
+                {savingTask ? '...' : '✓ Agregar'}
+              </button>
+              <button onClick={() => { setAddingTask(false); setNewTaskTitle(''); setNewTaskAssignee('') }} style={{ padding: '8px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.06)', border: 'none', color: '#64748b', fontSize: '13px', cursor: 'pointer', flexShrink: 0 }}>
+                ✕
+              </button>
+            </div>
           </div>
         )}
 
@@ -425,6 +452,13 @@ export default function ProjectTasksTab({ projectId, canAddTasks = false }: { pr
                   }}>
                     {task.title}
                   </span>
+
+                  {/* Assignee */}
+                  {task.assignee && (
+                    <span style={{ fontSize: '11px', color: '#64748b', flexShrink: 0, maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      👤 {task.assignee.split('/')[0].trim()}
+                    </span>
+                  )}
 
                   {/* Status badge */}
                   <span style={{

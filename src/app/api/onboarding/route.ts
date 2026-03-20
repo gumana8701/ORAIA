@@ -15,31 +15,40 @@ const SLACK_TOKEN = process.env.SLACK_BOT_TOKEN || ''
 // Always-included Slack members (by display name keywords)
 const CORE_MEMBERS = ['jennifer', 'trina', 'guillermo', 'enzo']
 
-const TASKS_VOICE = [
-  'Recolección de requerimientos (objetivos y casos de uso)',
-  'Configuración de número telefónico (Twilio u otro proveedor)',
-  'Redacción y grabación de voces (o configuración de TTS)',
-  'Diseño y configuración del flujo de llamadas (IVR, menú, transferencias)',
-  'Integración con sistemas externos (CRM, bases de datos, APIs)',
-  'Pruebas internas (QA)',
-  'Pruebas con cliente',
-  'Ajustes finales',
-  'Go Live / Puesta en producción',
-  'Monitoreo y soporte inicial',
+// Specialist keywords: Héctor / Victor / Brenda
+const SPECIALIST_KEYWORDS = ['hector', 'victor', 'brenda']
+// Integrator keywords: Kevin / Luca
+const INTEGRATOR_KEYWORDS = ['kevin', 'luca']
+
+type TaskDef = { title: string; category: string; assigneeRole: 'specialist' | 'integrator' | 'trina' | 'jennifer+specialist' | null }
+
+const TASKS_VOICE: TaskDef[] = [
+  { title: 'ORA BOB Process',                    category: 'Agente de Voz',   assigneeRole: 'specialist' },
+  { title: 'Cableado',                            category: 'Agente de Voz',   assigneeRole: 'integrator' },
+  { title: 'Testeo del script final',             category: 'Agente de Voz',   assigneeRole: 'specialist' },
+  { title: 'Twilio',                              category: 'Agente de Voz',   assigneeRole: 'trina' },
+  { title: 'Sub cuenta en el dashboard de ORA IA', category: 'Agente de Voz', assigneeRole: 'specialist' },
+  { title: 'Sub cuenta en GHL',                  category: 'Agente de Voz',   assigneeRole: 'specialist' },
 ]
 
-const TASKS_WHATSAPP = [
-  'Recolección de requerimientos (objetivos y casos de uso)',
-  'Conexión del número de WhatsApp/SMS (configuración y verificación)',
-  'Configuración del agente/chatbot (flujos conversacionales y respuestas automáticas)',
-  'Integración con CRM o sistemas externos',
-  'Configuración de AppLevel/permisos y accesos',
-  'Pruebas internas (QA)',
-  'Pruebas con cliente',
-  'Ajustes finales',
-  'Go Live / Puesta en producción',
-  'Monitoreo y soporte inicial',
+const TASKS_WHATSAPP: TaskDef[] = [
+  { title: 'Onboarding Call',    category: 'WhatsApp/Texto', assigneeRole: 'jennifer+specialist' },
+  { title: 'Cableado',           category: 'WhatsApp/Texto', assigneeRole: 'integrator' },
+  { title: 'Testeo del chatbot', category: 'WhatsApp/Texto', assigneeRole: 'specialist' },
+  { title: 'AppLevel/n8n',       category: 'WhatsApp/Texto', assigneeRole: 'integrator' },
 ]
+
+function resolveAssignee(
+  role: TaskDef['assigneeRole'],
+  specialist: string | null,
+  integrator: string | null
+): string | null {
+  if (role === 'specialist') return specialist
+  if (role === 'integrator') return integrator
+  if (role === 'trina') return 'Trina Gomez'
+  if (role === 'jennifer+specialist') return ['Jennifer Serrano', specialist].filter(Boolean).join(' / ')
+  return null
+}
 
 async function slackPost(method: string, body: Record<string, any>) {
   const res = await fetch(`https://slack.com/api/${method}`, {
@@ -176,30 +185,34 @@ export async function POST(req: NextRequest) {
       results.notion = { linked: true }
     }
 
-    // ── 3. Create tasks ────────────────────────────────────────────────────
-    // Delete existing tasks first
+    // ── 3. Create tasks with auto-assignment ──────────────────────────────
     await sb.from('project_tasks').delete().eq('project_id', projectId)
 
-    // Build task list based on selected types
-    let taskList: { title: string; category: string }[] = []
-    if (types.includes('voice')) {
-      taskList = [...taskList, ...TASKS_VOICE.map(t => ({ title: t, category: 'Agente de Voz' }))]
-    }
-    if (types.includes('whatsapp')) {
-      taskList = [...taskList, ...TASKS_WHATSAPP.map(t => ({ title: t, category: 'WhatsApp/Texto' }))]
-    }
-    if (taskList.length === 0) {
-      taskList = TASKS_WHATSAPP.map(t => ({ title: t, category: 'WhatsApp/Texto' }))
-    }
+    // Determine specialist and integrator from assignedDevs
+    const specialist = assignedDevs.find(n =>
+      SPECIALIST_KEYWORDS.some(k => n.toLowerCase().includes(k))
+    ) || null
+    const integrator = assignedDevs.find(n =>
+      INTEGRATOR_KEYWORDS.some(k => n.toLowerCase().includes(k))
+    ) || null
 
-    const tasksToInsert = taskList.map((t, i) => ({
+    let taskDefs: TaskDef[] = []
+    if (types.includes('voice')) taskDefs = [...taskDefs, ...TASKS_VOICE]
+    if (types.includes('whatsapp')) taskDefs = [...taskDefs, ...TASKS_WHATSAPP]
+    if (taskDefs.length === 0) taskDefs = [...TASKS_WHATSAPP]
+
+    const tasksToInsert = taskDefs.map((t, i) => ({
       project_id: projectId,
       title: t.title,
       category: t.category,
       order_index: i,
       completed: false,
       status: 'pendiente',
+      assignee: resolveAssignee(t.assigneeRole, specialist, integrator),
     }))
+
+    // Keep flat list for welcome message
+    const taskList = taskDefs.map(t => ({ title: t.title, category: t.category }))
 
     const { data: tasks, error: taskErr } = await sb.from('project_tasks').insert(tasksToInsert).select('id')
     results.tasks = { created: tasks?.length || 0, error: taskErr?.message || null }
@@ -333,8 +346,10 @@ Responde SOLO con JSON válido:
         ? '🎙 Agente de Voz + 💬 WhatsApp'
         : types.includes('voice') ? '🎙 Agente de Voz' : '💬 WhatsApp / Texto'
 
-      const taskLines = taskList.slice(0, 5).map((t, i) => `${i + 1}. ${t.title}`).join('\n')
-      const extraTasks = taskList.length > 5 ? `\n_...y ${taskList.length - 5} tareas más_` : ''
+      const taskLines = tasksToInsert.slice(0, 6).map((t, i) =>
+        `${i + 1}. ${t.title}${t.assignee ? ` — _${t.assignee}_` : ''}`
+      ).join('\n')
+      const extraTasks = tasksToInsert.length > 6 ? `\n_...y ${tasksToInsert.length - 6} tareas más_` : ''
 
       const welcomeMsg = [
         `👋 *¡Bienvenidos al proyecto ${projectName.trim()}!*`,
