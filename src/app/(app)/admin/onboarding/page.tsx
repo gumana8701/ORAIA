@@ -7,6 +7,8 @@ const DEVS = [
   { name: 'Héctor Ramirez', emoji: '🔵' },
   { name: 'Luca Fonzo', emoji: '🟢' },
   { name: 'Kevin ORA IA', emoji: '🟣' },
+  { name: 'Brenda Cruz', emoji: '🟡' },
+  { name: 'Victor Ramirez', emoji: '🔴' },
 ]
 
 function slugify(str: string) {
@@ -52,6 +54,10 @@ export default function OnboardingPage() {
   }
 
   async function submit() {
+    if (!notionProjectId) {
+      alert('⚠️ Debes seleccionar un proyecto de Notion antes de continuar.')
+      return
+    }
     setLoading(true)
     try {
       const res = await fetch('/api/onboarding', {
