@@ -111,12 +111,34 @@ function TaskDrawer({
             <h2 style={{ fontSize: '15px', fontWeight: 700, color: '#f1f5f9', margin: '0 0 6px', lineHeight: 1.4 }}>
               {task.title}
             </h2>
-            {/* Assignee */}
-            {task.assignee && (
-              <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 10px' }}>
-                👤 {task.assignee}
-              </p>
-            )}
+            {/* Assignee selector */}
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '4px' }}>
+                👤 Asignado a
+              </label>
+              <select
+                defaultValue={task.assignee || ''}
+                onChange={async e => {
+                  const newAssignee = e.target.value || null
+                  await fetch(`/api/projects/${projectId}/tasks`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ taskId: task.id, assignee: newAssignee }),
+                  })
+                  setSelectedTask({ ...task, assignee: newAssignee })
+                  setTasks(prev => prev.map(t => t.id === task.id ? { ...t, assignee: newAssignee } : t))
+                }}
+                style={{
+                  width: '100%', background: '#fff', border: '1px solid #e2e8f0',
+                  borderRadius: '8px', padding: '7px 10px', fontSize: '13px', color: '#111827', outline: 'none',
+                }}
+              >
+                <option value="">— Sin asignar —</option>
+                {['Enzo ORA IA','Héctor Ramirez','Victor Ramirez','Brenda Cruz','Kevin ORA IA','Luca Fonzo','Jennifer Serrano','Trina Gomez'].map(n => (
+                  <option key={n} value={n} style={{ color: '#111827' }}>{n}</option>
+                ))}
+              </select>
+            </div>
             {/* Status selector */}
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               {(Object.entries(STATUS_CONFIG) as [Task['status'], typeof STATUS_CONFIG[keyof typeof STATUS_CONFIG]][]).map(([key, c]) => (

@@ -17,11 +17,12 @@ async function slackPost(method: string, body: Record<string, any>) {
   })
 }
 
-async function getProjectSlackChannel(projectId: string): Promise<string | null> {
+async function getProject(projectId: string) {
   const { data } = await sb.from('projects').select('slack_channel_id, nombre').eq('id', projectId).single()
-  return data?.slack_channel_id || null
+  return data
 }
 
+// ── GET /api/projects/[id]/tasks ─────────────────────────────────────────────
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -37,16 +38,16 @@ export async function GET(
   return NextResponse.json(data || [])
 }
 
+// ── POST /api/projects/[id]/tasks — create task ───────────────────────────────
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const { title, category, author } = await req.json()
+  const { title, category, assignee, author } = await req.json()
 
   if (!title?.trim()) return NextResponse.json({ error: 'title required' }, { status: 400 })
 
-  // Get current max order_index
   const { data: existing } = await sb
     .from('project_tasks')
     .select('order_index')
@@ -55,6 +56,7 @@ export async function POST(
     .limit(1)
 
   const nextIndex = (existing?.[0]?.order_index ?? -1) + 1
+  const now = new Date().toISOString()
 
   const { data: task, error } = await sb
     .from('project_tasks')
@@ -65,24 +67,37 @@ export async function POST(
       order_index: nextIndex,
       completed: false,
       status: 'pendiente',
+      assignee: assignee || null,
+      status_changed_at: now,
     })
     .select()
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Notify Slack
-  const channelId = await getProjectSlackChannel(id)
-  if (channelId) {
+  // Log history entry
+  await sb.from('task_status_history').insert({
+    task_id: task.id,
+    project_id: id,
+    status: 'pendiente',
+    changed_at: now,
+    changed_by: author || 'Sistema',
+    duration_seconds: 0,
+  })
+
+  // Slack alert
+  const proj = await getProject(id)
+  if (proj?.slack_channel_id) {
     await slackPost('chat.postMessage', {
-      channel: channelId,
-      text: `📋 *Nueva tarea agregada* por ${author || 'el equipo'}:\n> ${title.trim()}`,
+      channel: proj.slack_channel_id,
+      text: `📋 *Nueva tarea agregada*${assignee ? ` — asignada a *${assignee}*` : ''}:\n> ${title.trim()}`,
     })
   }
 
   return NextResponse.json(task)
 }
 
+// ── PATCH /api/projects/[id]/tasks — update task ─────────────────────────────
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -90,7 +105,15 @@ export async function PATCH(
   const { id } = await params
   const { taskId, completed, status, notes, assignee, author } = await req.json()
 
-  const patch: Record<string, any> = { updated_at: new Date().toISOString() }
+  // Fetch current task state
+  const { data: current } = await sb
+    .from('project_tasks')
+    .select('title, status, status_changed_at, time_pendiente_seconds, time_bloqueado_seconds, time_completado_seconds')
+    .eq('id', taskId)
+    .single()
+
+  const now = new Date()
+  const patch: Record<string, any> = { updated_at: now.toISOString() }
 
   let newStatus = status
   if (completed !== undefined) {
@@ -100,39 +123,54 @@ export async function PATCH(
   if (newStatus !== undefined) {
     patch.status = newStatus
     patch.completed = newStatus === 'completado'
+    if (newStatus === 'completado') patch.completed_at = now.toISOString()
+    if (newStatus === 'en progreso' && !current?.started_at) patch.started_at = now.toISOString()
+    patch.status_changed_at = now.toISOString()
   }
   if (notes !== undefined) patch.notes = notes
   if (assignee !== undefined) patch.assignee = assignee
 
-  const { data: taskData } = await sb
-    .from('project_tasks')
-    .select('title, status')
-    .eq('id', taskId)
-    .single()
+  // Calculate time spent in previous status
+  if (current && newStatus && newStatus !== current.status) {
+    const prevChanged = current.status_changed_at ? new Date(current.status_changed_at) : now
+    const durationSecs = Math.round((now.getTime() - prevChanged.getTime()) / 1000)
 
-  const { error } = await sb
+    if (current.status === 'pendiente')   patch.time_pendiente_seconds   = (current.time_pendiente_seconds   || 0) + durationSecs
+    if (current.status === 'bloqueado')   patch.time_bloqueado_seconds   = (current.time_bloqueado_seconds   || 0) + durationSecs
+    if (current.status === 'completado')  patch.time_completado_seconds  = (current.time_completado_seconds  || 0) + durationSecs
+
+    // Log history
+    await sb.from('task_status_history').insert({
+      task_id: taskId,
+      project_id: id,
+      status: newStatus,
+      changed_at: now.toISOString(),
+      changed_by: author || 'Equipo',
+      duration_seconds: durationSecs,
+    })
+  }
+
+  const { data: updated, error } = await sb
     .from('project_tasks')
     .update(patch)
     .eq('id', taskId)
     .eq('project_id', id)
+    .select()
+    .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Notify Slack on status change to completado
-  const wasCompleted = taskData?.status !== 'completado' && patch.status === 'completado'
-  const wasBlocked = patch.status === 'bloqueado'
-
-  if (wasCompleted || wasBlocked) {
-    const channelId = await getProjectSlackChannel(id)
-    if (channelId && taskData?.title) {
-      const emoji = wasCompleted ? '✅' : '🔴'
-      const statusLabel = wasCompleted ? 'completada' : 'bloqueada'
+  // Slack alert on status change
+  if (current && newStatus && newStatus !== current.status) {
+    const proj = await getProject(id)
+    if (proj?.slack_channel_id) {
+      const emoji = newStatus === 'completado' ? '✅' : newStatus === 'bloqueado' ? '🚫' : '🔄'
       await slackPost('chat.postMessage', {
-        channel: channelId,
-        text: `${emoji} *Tarea ${statusLabel}*:\n> ${taskData.title}${author ? `\n_Actualizado por ${author}_` : ''}`,
+        channel: proj.slack_channel_id,
+        text: `${emoji} *Tarea actualizada* en _${proj.nombre}_:\n> *${current.title}*\n${current.status} → *${newStatus}*${updated?.assignee ? ` — ${updated.assignee}` : ''}`,
       })
     }
   }
 
-  return NextResponse.json({ success: true })
+  return NextResponse.json(updated)
 }
