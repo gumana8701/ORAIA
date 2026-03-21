@@ -5,7 +5,7 @@ interface Task {
   id: string
   title: string
   completed: boolean
-  status: 'pendiente' | 'bloqueado' | 'completado'
+  status: 'pendiente' | 'en_progreso' | 'bloqueado' | 'completado'
   order_index: number
   category: string | null
   assignee: string | null
@@ -21,10 +21,13 @@ interface Comment {
 }
 
 const STATUS_CONFIG = {
-  pendiente:  { label: 'Pendiente',  color: '#64748b', bg: 'rgba(100,116,139,0.15)', dot: '#64748b' },
-  bloqueado:  { label: 'Bloqueado',  color: '#f87171', bg: 'rgba(248,113,113,0.12)', dot: '#ef4444' },
-  completado: { label: 'Completado', color: '#22c55e', bg: 'rgba(34,197,94,0.12)',   dot: '#22c55e' },
+  pendiente:   { label: 'Pendiente',   color: '#64748b', bg: 'rgba(100,116,139,0.15)', dot: '#64748b' },
+  en_progreso: { label: 'En Progreso', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)',  dot: '#3b82f6' },
+  bloqueado:   { label: 'Bloqueado',   color: '#f87171', bg: 'rgba(248,113,113,0.12)', dot: '#ef4444' },
+  completado:  { label: 'Completado',  color: '#22c55e', bg: 'rgba(34,197,94,0.12)',   dot: '#22c55e' },
 }
+
+const TICKET_TEAM = ['Jennifer Serrano','Trina Gomez','Enzo ORA IA','Brenda Cruz','Luca Fonzo','Victor Ramirez','Héctor Ramirez']
 
 function timeAgo(iso: string) {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000
@@ -32,6 +35,76 @@ function timeAgo(iso: string) {
   if (diff < 3600) return `hace ${Math.floor(diff/60)}m`
   if (diff < 86400) return `hace ${Math.floor(diff/3600)}h`
   return `hace ${Math.floor(diff/86400)}d`
+}
+
+// ── Ticket Modal ─────────────────────────────────────────────────────────────
+function TicketModal({
+  task, projectId, onClose, onCreated, currentUser = 'Equipo',
+}: {
+  task: Task; projectId: string; onClose: () => void
+  onCreated: (ticket: any) => void; currentUser?: string
+}) {
+  const [desc, setDesc]           = useState('')
+  const [assignee, setAssignee]   = useState('')
+  const [markBlocked, setBlock]   = useState(false)
+  const [saving, setSaving]       = useState(false)
+
+  async function submit() {
+    if (!desc.trim() || !assignee) return
+    setSaving(true)
+    const res = await fetch(`/api/projects/${projectId}/tasks/${task.id}/tickets`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description: desc.trim(), assignee, requested_by: currentUser, mark_blocked: markBlocked }),
+    })
+    const data = await res.json()
+    if (data.id) { onCreated(data); onClose() }
+    setSaving(false)
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '16px', padding: '28px', width: '440px', maxWidth: '95vw' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#f1f5f9' }}>🎫 Pedir ayuda</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+        </div>
+        <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 16px' }}>Tarea: <span style={{ color: '#94a3b8', fontWeight: 600 }}>{task.title}</span></p>
+
+        <label style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }}>¿Qué necesitas?</label>
+        <textarea
+          autoFocus value={desc} onChange={e => setDesc(e.target.value)}
+          placeholder="Describe el problema o lo que necesitas para continuar..."
+          rows={4}
+          style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '10px 12px', fontSize: '13px', color: '#f1f5f9', outline: 'none', resize: 'vertical', marginBottom: '14px' }}
+        />
+
+        <label style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }}>Asignar a</label>
+        <select value={assignee} onChange={e => setAssignee(e.target.value)}
+          style={{ width: '100%', background: '#fff', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '8px 12px', fontSize: '13px', color: '#111827', marginBottom: '14px', outline: 'none' }}>
+          <option value="">— Seleccionar persona —</option>
+          {TICKET_TEAM.map(n => <option key={n} value={n} style={{ color: '#111827' }}>{n}</option>)}
+        </select>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#94a3b8', cursor: 'pointer', marginBottom: '20px' }}>
+          <input type="checkbox" checked={markBlocked} onChange={e => setBlock(e.target.checked)}
+            style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
+          Marcar tarea como <strong style={{ color: '#f87171' }}>Bloqueada</strong>
+        </label>
+
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={submit} disabled={saving || !desc.trim() || !assignee}
+            style={{ flex: 1, padding: '10px', borderRadius: '8px', background: '#E8792F', border: 'none', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
+            {saving ? 'Enviando...' : '🎫 Crear ticket'}
+          </button>
+          <button onClick={onClose} style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.06)', border: 'none', color: '#64748b', fontSize: '13px', cursor: 'pointer' }}>
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 // ── Task Drawer ───────────────────────────────────────────────────────────────
@@ -46,6 +119,7 @@ function TaskDrawer({
   const [newComment, setNewComment] = useState('')
   const [postingComment, setPostingComment] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState(false)
+  const [showTicketModal, setShowTicketModal] = useState(false)
   const commentsEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -68,6 +142,8 @@ function TaskDrawer({
     })
     onStatusChange(task.id, newStatus)
     setUpdatingStatus(false)
+    // Auto-open ticket modal when marking as bloqueado
+    if (newStatus === 'bloqueado') setShowTicketModal(true)
   }
 
   async function addComment() {
@@ -110,9 +186,18 @@ function TaskDrawer({
           display: 'flex', alignItems: 'flex-start', gap: '12px',
         }}>
           <div style={{ flex: 1 }}>
-            <h2 style={{ fontSize: '15px', fontWeight: 700, color: '#f1f5f9', margin: '0 0 6px', lineHeight: 1.4 }}>
-              {task.title}
-            </h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+              <h2 style={{ fontSize: '15px', fontWeight: 700, color: '#f1f5f9', margin: 0, lineHeight: 1.4, flex: 1 }}>
+                {task.title}
+              </h2>
+              <button
+                onClick={() => setShowTicketModal(true)}
+                style={{ marginLeft: '10px', padding: '4px 10px', borderRadius: '6px', flexShrink: 0, background: 'rgba(232,121,47,0.1)', border: '1px solid rgba(232,121,47,0.3)', color: '#E8792F', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                title="Pedir ayuda para esta tarea"
+              >
+                🎫 Pedir ayuda
+              </button>
+            </div>
             {/* Assignee selector */}
             <div style={{ marginBottom: '14px' }}>
               <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '4px' }}>
@@ -230,6 +315,23 @@ function TaskDrawer({
           </button>
         </div>
       </div>
+
+      {/* Ticket Modal */}
+      {showTicketModal && (
+        <TicketModal
+          task={task}
+          projectId={projectId}
+          onClose={() => setShowTicketModal(false)}
+          onCreated={ticket => {
+            // Add system comment locally
+            setComments(prev => [...prev, {
+              id: Date.now().toString(), task_id: task.id,
+              author: 'Sistema', content: `🎫 Ticket abierto para **${ticket.assignee}**: ${ticket.description}`,
+              created_at: new Date().toISOString(),
+            }])
+          }}
+        />
+      )}
     </>
   )
 }

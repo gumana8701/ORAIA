@@ -43,6 +43,12 @@ const ALERT_COPY: Record<string, { emoji: string; header: string; detail: string
     detail: 'No se pudo detectar la cantidad de servicios contratados. Por favor especifica cuántos y qué tipo de agentes (voz/WhatsApp) fueron contratados.',
     btn: '📋 Definir servicios',
   },
+  ticket_blocked: {
+    emoji: '🎫',
+    header: 'Ticket pendiente de resolución',
+    detail: 'Hay un ticket de soporte sin resolver. Por favor atiéndelo para desbloquear la tarea.',
+    btn: '🔍 Ver ticket',
+  },
 }
 
 async function sendAlert(alert: any, isFollowUp = false): Promise<string | null> {
@@ -88,7 +94,7 @@ export async function POST(req: NextRequest) {
     .select('*')
     .eq('status', 'pending')
     .lte('send_after', now.toISOString())
-    .in('alert_type', ['kpi_missing', 'services_missing'])
+    .in('alert_type', ['kpi_missing', 'services_missing', 'ticket_blocked'])
 
   for (const alert of pending || []) {
     if (!alert.slack_channel_id) continue
@@ -109,7 +115,7 @@ export async function POST(req: NextRequest) {
     .select('*')
     .eq('status', 'open')
     .lte('last_sent_at', cutoff)
-    .in('alert_type', ['kpi_missing', 'services_missing'])
+    .in('alert_type', ['kpi_missing', 'services_missing', 'ticket_blocked'])
 
   for (const alert of (open || []).filter((a: any) => a.send_count < a.max_sends)) {
     if (!alert.slack_channel_id) continue
