@@ -278,16 +278,23 @@ export async function POST(req: NextRequest) {
             (welcomeCall.transcript_raw || '').substring(0, 6000),
           ].filter(Boolean).join('\n\n')
 
+          const projectTypeLabel = types.includes('voice') && types.includes('whatsapp')
+            ? 'voz y WhatsApp/chat'
+            : types.includes('voice') ? 'agente de voz' : 'agente de WhatsApp/chat'
+
           const prompt = `Eres un asistente de operaciones de ORA AI. Analiza esta llamada de bienvenida con el cliente "${projectName}" y extrae:
 
 CONTENIDO:
 ${content}
 
+El proyecto es de tipo: ${projectTypeLabel}
+
 Responde SOLO con JSON válido:
 {
   "descripcion_empresa": "1-2 oraciones describiendo a qué se dedica el cliente/empresa",
   "objetivo_proyecto": "1-2 oraciones explicando qué quiere lograr con este proyecto de IA",
-  "kpis_acordados": ["KPI 1 acordado", "KPI 2 acordado"]
+  "kpis_acordados": ["KPI 1 acordado", "KPI 2 acordado"],
+  "servicios_contratados": "descripción breve de cuántos y qué tipo de agentes contrató, ej: '2 Agentes de Voz + 1 WhatsApp' o null si no se menciona"
 }`
 
           const gemRes = await fetch(
@@ -306,10 +313,13 @@ Responde SOLO con JSON válido:
           const jsonMatch = text.match(/\{[\s\S]*\}/)
           if (jsonMatch) {
             const extracted = JSON.parse(jsonMatch[0])
+            const servicesDetail = extracted.servicios_contratados || null
             await sb.from('projects').update({
               descripcion_empresa: extracted.descripcion_empresa || null,
               objetivo_proyecto: extracted.objetivo_proyecto || null,
               kpis_acordados: extracted.kpis_acordados || [],
+              services_detail: servicesDetail,
+              services_count: servicesDetail ? 1 : 0, // flag: >0 means detected
             }).eq('id', projectId)
             results.welcomeCall = {
               found: true,
@@ -318,7 +328,12 @@ Responde SOLO con JSON válido:
                 descripcion: extracted.descripcion_empresa,
                 objetivo: extracted.objetivo_proyecto,
                 kpis: extracted.kpis_acordados?.length || 0,
+                servicios: servicesDetail,
               }
+            }
+            // If services couldn't be detected, create services_missing alert
+            if (!servicesDetail) {
+              results.servicesAlert = 'pending_creation'
             }
           } else {
             results.welcomeCall = { found: true, title: welcomeCall.title }
@@ -371,23 +386,31 @@ Responde SOLO con JSON válido:
       results.welcomeSlack = { sent: true }
     }
 
-    // ── 7. Create KPI missing alert (fires after 6h business hours) ───────
-    // Use the Slack channel from this onboarding or from existing project record
+    // ── 7. Create alerts (KPI missing + services missing if not detected) ──
     const slackChanId = slackResult?.id || null
     const sendAfter6h = new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString()
-    const { data: alertCreated } = await sb.from('alerts').insert({
-      project_id: projectId,
-      alert_type: 'kpi_missing',
-      title: `KPIs no definidos — ${projectName.trim()}`,
-      status: 'pending',
-      slack_channel_id: slackChanId || null,
-      send_after: sendAfter6h,
-      send_count: 0,
-      max_sends: 10,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }).select('id').single()
-    results.alert = { created: true, id: alertCreated?.id, sendAfter: sendAfter6h }
+    const alertNow = new Date().toISOString()
+    const alertBase = {
+      status: 'pending', slack_channel_id: slackChanId || null,
+      send_after: sendAfter6h, send_count: 0, max_sends: 10,
+      created_at: alertNow, updated_at: alertNow,
+      tipo: 'otro', nivel: 'medio', resuelta: false,
+    }
+
+    const alertsToCreate: Record<string, any>[] = [
+      { ...alertBase, project_id: projectId, alert_type: 'kpi_missing',
+        title: `KPIs no definidos — ${projectName.trim()}`,
+        descripcion: `KPIs no definidos — ${projectName.trim()}` },
+    ]
+    // If Gemini couldn't detect services, queue a services_missing alert too
+    if (!results.welcomeCall?.extracted?.servicios) {
+      alertsToCreate.push({ ...alertBase, project_id: projectId, alert_type: 'services_missing',
+        title: `Servicios contratados no definidos — ${projectName.trim()}`,
+        descripcion: `Servicios contratados no definidos — ${projectName.trim()}` })
+    }
+
+    const { data: alertsCreated } = await sb.from('alerts').insert(alertsToCreate).select('id, alert_type')
+    results.alerts = (alertsCreated as any[])?.map(a => ({ id: a.id, type: a.alert_type }))
 
     return NextResponse.json({
       success: true,

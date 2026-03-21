@@ -176,7 +176,7 @@ export default async function ProyectoDetalle({
         </div>
 
         {/* Stats */}
-        <div style={{display:'flex',gap:'24px',marginTop:'16px',flexWrap:'wrap'}}>
+        <div style={{display:'flex',gap:'24px',marginTop:'16px',flexWrap:'wrap',alignItems:'center'}}>
           <div style={{fontSize:'13px',color:'#A0AEC0'}}>
             💬 <span style={{color:'#fff',fontWeight:600}}>{proyecto.total_mensajes}</span> mensajes
           </div>
@@ -186,6 +186,16 @@ export default async function ProyectoDetalle({
           {(proyecto.alertas_count??0)>0 && (
             <div style={{fontSize:'13px',color:'#f59e0b'}}>
               ⚠️ <span style={{fontWeight:600}}>{proyecto.alertas_count}</span> alertas
+            </div>
+          )}
+          {/* Services contracted */}
+          {(proyecto as any).services_detail ? (
+            <div style={{fontSize:'12px',padding:'3px 10px',borderRadius:'6px',background:'rgba(232,121,47,0.10)',border:'1px solid rgba(232,121,47,0.25)',color:'#E8792F',fontWeight:600}}>
+              🤝 {(proyecto as any).services_detail}
+            </div>
+          ) : (proyecto as any).project_type && (
+            <div style={{fontSize:'12px',padding:'3px 10px',borderRadius:'6px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.10)',color:'#64748b',fontWeight:600}}>
+              {(proyecto as any).project_type === 'voice' ? '🎙 Agente de Voz' : (proyecto as any).project_type === 'whatsapp' ? '💬 WhatsApp' : (proyecto as any).project_type === 'both' ? '🎙💬 Voz + Chat' : (proyecto as any).project_type}
             </div>
           )}
         </div>
