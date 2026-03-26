@@ -11,6 +11,7 @@ import NotionTasksTab from '@/components/NotionTasksTab'
 import ProjectChat from '@/components/ProjectChat'
 import ProjectTasksTab from '@/components/ProjectTasksTab'
 import { getSessionProfile } from '@/lib/auth'
+import ProjectMetaEditor from '@/components/ProjectMetaEditor'
 
 const nivelColor: Record<string, string> = {
   critico: '#ef4444', alto: '#f97316', medio: '#f59e0b', bajo: '#6b7280',
@@ -167,37 +168,11 @@ export default async function ProyectoDetalle({
               {proyecto.color_emoji && <span style={{fontSize:'18px'}}>{proyecto.color_emoji}</span>}
               <h1 style={{fontSize:'24px',fontWeight:800,color:'#fff',margin:0}}>{proyecto.nombre}</h1>
             </div>
-            {proyecto.nicho && (
-              <span style={{
-                display:'inline-block',
-                fontSize:'11px',color:'#94a3b8',
-                background:'rgba(255,255,255,0.05)',
-                border:'1px solid rgba(255,255,255,0.09)',
-                borderRadius:'5px',padding:'2px 10px',
-                fontWeight:500,letterSpacing:'0.03em',marginTop:'2px',
-              }}>
-                {proyecto.nicho}
-              </span>
-            )}
-            {proyecto.tipo_leads && (
-              <div style={{marginTop:'10px',display:'flex',alignItems:'center',gap:'8px'}}>
-                <span style={{fontSize:'11px',color:'#475569',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.05em'}}>
-                  Tipo de leads
-                </span>
-                <span style={{
-                  fontSize:'11px',fontWeight:700,padding:'2px 10px',borderRadius:'5px',
-                  ...(proyecto.tipo_leads === 'campaña'
-                    ? {background:'rgba(59,130,246,0.10)',color:'#60a5fa',border:'1px solid rgba(59,130,246,0.20)'}
-                    : proyecto.tipo_leads === 'base_de_datos'
-                    ? {background:'rgba(34,197,94,0.10)',color:'#4ade80',border:'1px solid rgba(34,197,94,0.20)'}
-                    : {background:'rgba(232,121,47,0.10)',color:'#E8792F',border:'1px solid rgba(232,121,47,0.20)'}),
-                }}>
-                  {proyecto.tipo_leads === 'campaña' ? '📣 Campaña'
-                    : proyecto.tipo_leads === 'base_de_datos' ? '🗃 Base de datos'
-                    : '📣🗃 Ambos'}
-                </span>
-              </div>
-            )}
+            <ProjectMetaEditor
+              projectId={id}
+              initialNicho={proyecto.nicho}
+              initialTipoLeads={proyecto.tipo_leads}
+            />
           </div>
           <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:'8px',flexShrink:0}}>
             {notionProject?.cantidad_contratada != null && (
