@@ -240,11 +240,23 @@ export default function ProjectCard({
                   {proyecto.nombre}
                 </h3>
               </div>
-              <p style={{ fontSize: '11px', color: '#64748b', margin: 0 }}>
+              <p style={{ fontSize: '11px', color: '#64748b', margin: '0 0 2px' }}>
                 {proyecto.total_mensajes
                   ? `${proyecto.total_mensajes.toLocaleString('es')} mensajes`
                   : proyecto.cliente}
               </p>
+              {proyecto.nicho && (
+                <span style={{
+                  display: 'inline-block',
+                  fontSize: '10px', color: '#94a3b8',
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.07)',
+                  borderRadius: '4px', padding: '1px 6px',
+                  fontWeight: 500, letterSpacing: '0.02em',
+                }}>
+                  {proyecto.nicho}
+                </span>
+              )}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
               <StatusBadge estado={proyecto.estado} />

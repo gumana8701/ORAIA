@@ -19,6 +19,7 @@ export interface Proyecto {
   fecha_inicio?: string
   created_at?: string
   updated_at?: string
+  nicho?: string
 }
 
 export interface Mensaje {
