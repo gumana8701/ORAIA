@@ -163,9 +163,9 @@ export default function ProjectMetaEditor({
   }
 
   return (
-    <div style={{ display: 'flex', gap: '24px', marginTop: '10px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
 
-      {/* Left: Nicho + Tipo de leads */}
+      {/* Nicho + Tipo de leads */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
 
         {/* Nicho */}
@@ -273,11 +273,8 @@ export default function ProjectMetaEditor({
         </div>
       </div>
 
-      {/* Divider */}
-      <div style={{ width: '1px', background: 'rgba(255,255,255,0.06)', alignSelf: 'stretch', minHeight: '40px' }} />
-
-      {/* Right: Twilio */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      {/* Twilio */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <span style={{ fontSize: '11px', color: '#E8792F', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>
           📞 Twilio
         </span>
@@ -287,11 +284,8 @@ export default function ProjectMetaEditor({
         <InlineField label="Saldo"   value={twilioSaldo}  placeholder="+ saldo"   onSave={v => saveTwilio('twilio_saldo',  v)} saving={saving} />
       </div>
 
-      {/* Divider */}
-      <div style={{ width: '1px', background: 'rgba(255,255,255,0.06)', alignSelf: 'stretch', minHeight: '40px' }} />
-
       {/* Tipo de integración */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>
           Integración
         </span>
