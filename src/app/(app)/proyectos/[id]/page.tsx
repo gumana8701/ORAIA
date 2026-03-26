@@ -172,6 +172,10 @@ export default async function ProyectoDetalle({
               projectId={id}
               initialNicho={proyecto.nicho}
               initialTipoLeads={proyecto.tipo_leads}
+              initialTwilioCuenta={proyecto.twilio_cuenta}
+              initialTwilioBundle={proyecto.twilio_bundle}
+              initialTwilioNumero={proyecto.twilio_numero}
+              initialTwilioSaldo={proyecto.twilio_saldo}
             />
           </div>
           <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:'8px',flexShrink:0}}>

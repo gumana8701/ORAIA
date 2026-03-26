@@ -21,6 +21,10 @@ export interface Proyecto {
   updated_at?: string
   nicho?: string
   tipo_leads?: 'campaña' | 'base_de_datos' | 'ambos'
+  twilio_cuenta?: string
+  twilio_bundle?: string
+  twilio_numero?: string
+  twilio_saldo?: string
 }
 
 export interface Mensaje {
