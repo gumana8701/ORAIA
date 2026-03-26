@@ -12,6 +12,7 @@ import ProjectChat from '@/components/ProjectChat'
 import ProjectTasksTab from '@/components/ProjectTasksTab'
 import { getSessionProfile } from '@/lib/auth'
 import ProjectMetaEditor from '@/components/ProjectMetaEditor'
+import ProjectDocs from '@/components/ProjectDocs'
 
 const nivelColor: Record<string, string> = {
   critico: '#ef4444', alto: '#f97316', medio: '#f59e0b', bajo: '#6b7280',
@@ -177,6 +178,15 @@ export default async function ProyectoDetalle({
               initialTwilioNumero={proyecto.twilio_numero}
               initialTwilioSaldo={proyecto.twilio_saldo}
               initialTipoIntegracion={proyecto.tipo_integracion}
+            />
+            <ProjectDocs
+              projectId={id}
+              initialDocs={{
+                doc_expediente:    proyecto.doc_expediente,
+                doc_flujograma:    proyecto.doc_flujograma,
+                doc_cableado:      proyecto.doc_cableado,
+                accesos_brindados: proyecto.accesos_brindados,
+              }}
             />
           </div>
           <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:'8px',flexShrink:0}}>

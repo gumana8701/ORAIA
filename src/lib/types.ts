@@ -26,6 +26,10 @@ export interface Proyecto {
   twilio_numero?: string
   twilio_saldo?: string
   tipo_integracion?: 'chatbot' | 'app_level'
+  doc_expediente?: string
+  doc_flujograma?: string
+  doc_cableado?: string
+  accesos_brindados?: string
 }
 
 export interface Mensaje {
