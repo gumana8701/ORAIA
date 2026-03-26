@@ -84,6 +84,7 @@ export default function ProjectMetaEditor({
   initialTwilioBundle?: string | null
   initialTwilioNumero?: string | null
   initialTwilioSaldo?: string | null
+  initialTipoIntegracion?: 'chatbot' | 'app_level' | null
 }) {
   const router = useRouter()
   const [nicho, setNicho]           = useState(initialNicho ?? '')
@@ -92,6 +93,7 @@ export default function ProjectMetaEditor({
   const [twilioBundle, setTwilioBundle] = useState(initialTwilioBundle ?? '')
   const [twilioNumero, setTwilioNumero] = useState(initialTwilioNumero ?? '')
   const [twilioSaldo,  setTwilioSaldo]  = useState(initialTwilioSaldo ?? '')
+  const [tipoIntegracion, setTipoIntegracion] = useState<'chatbot' | 'app_level' | null>(initialTipoIntegracion ?? null)
   const [editingNicho, setEditingNicho] = useState(false)
   const [nichoInput, setNichoInput] = useState(initialNicho ?? '')
   const [showTipoPicker, setShowTipoPicker] = useState(false)
@@ -141,6 +143,12 @@ export default function ProjectMetaEditor({
   }
 
   const currentTipo = TIPO_OPTIONS.find(o => o.value === tipoLeads)
+
+  const saveTipoIntegracion = async (val: 'chatbot' | 'app_level') => {
+    const next = tipoIntegracion === val ? null : val
+    setTipoIntegracion(next)
+    await patch({ tipo_integracion: next })
+  }
 
   const saveTwilio = async (field: string, val: string) => {
     const setters: Record<string, (v: string) => void> = {
@@ -276,6 +284,42 @@ export default function ProjectMetaEditor({
         <InlineField label="Bundle"  value={twilioBundle} placeholder="+ bundle"  onSave={v => saveTwilio('twilio_bundle', v)} saving={saving} />
         <InlineField label="Número"  value={twilioNumero} placeholder="+ número"  onSave={v => saveTwilio('twilio_numero', v)} saving={saving} />
         <InlineField label="Saldo"   value={twilioSaldo}  placeholder="+ saldo"   onSave={v => saveTwilio('twilio_saldo',  v)} saving={saving} />
+      </div>
+
+      {/* Divider */}
+      <div style={{ width: '1px', background: 'rgba(255,255,255,0.06)', alignSelf: 'stretch', minHeight: '40px' }} />
+
+      {/* Tipo de integración */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>
+          Integración
+        </span>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {([
+            { value: 'chatbot'  as const, label: '🤖 Chatbot',   color: '#a78bfa', bg: 'rgba(167,139,250,0.10)', border: 'rgba(167,139,250,0.25)' },
+            { value: 'app_level' as const, label: '⚡ App Level', color: '#38bdf8', bg: 'rgba(56,189,248,0.10)',  border: 'rgba(56,189,248,0.25)' },
+          ] as const).map(opt => {
+            const isActive = tipoIntegracion === opt.value
+            return (
+              <button
+                key={opt.value}
+                onClick={() => saveTipoIntegracion(opt.value)}
+                style={{
+                  fontSize: '11px', fontWeight: 700, padding: '4px 12px',
+                  borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s',
+                  background: isActive ? opt.bg : 'rgba(255,255,255,0.03)',
+                  color: isActive ? opt.color : '#475569',
+                  border: `1px solid ${isActive ? opt.border : 'rgba(255,255,255,0.07)'}`,
+                  boxShadow: isActive ? `0 0 10px ${opt.bg}` : 'none',
+                }}
+                onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = opt.bg; e.currentTarget.style.color = opt.color; e.currentTarget.style.borderColor = opt.border } }}
+                onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = '#475569'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' } }}
+              >
+                {saving ? '⏳' : opt.label}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
     </div>

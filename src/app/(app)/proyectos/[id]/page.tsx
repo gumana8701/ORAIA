@@ -176,6 +176,7 @@ export default async function ProyectoDetalle({
               initialTwilioBundle={proyecto.twilio_bundle}
               initialTwilioNumero={proyecto.twilio_numero}
               initialTwilioSaldo={proyecto.twilio_saldo}
+              initialTipoIntegracion={proyecto.tipo_integracion}
             />
           </div>
           <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:'8px',flexShrink:0}}>
