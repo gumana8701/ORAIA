@@ -30,6 +30,7 @@ export interface Proyecto {
   doc_flujograma?: string
   doc_cableado?: string
   accesos_brindados?: string
+  reunion_link?: string
 }
 
 export interface Mensaje {

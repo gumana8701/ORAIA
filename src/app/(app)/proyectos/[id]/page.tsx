@@ -186,6 +186,7 @@ export default async function ProyectoDetalle({
                 doc_flujograma:    proyecto.doc_flujograma,
                 doc_cableado:      proyecto.doc_cableado,
                 accesos_brindados: proyecto.accesos_brindados,
+                reunion_link:      proyecto.reunion_link,
               }}
             />
           </div>

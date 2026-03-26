@@ -7,6 +7,7 @@ const DOCS = [
   { key: 'doc_flujograma',    label: 'Flujograma',        icon: '🔀', isUrl: true  },
   { key: 'doc_cableado',      label: 'Cableado',          icon: '🔌', isUrl: true  },
   { key: 'accesos_brindados', label: 'Accesos brindados', icon: '🔑', isUrl: false },
+  { key: 'reunion_link',      label: 'Link reuniones',    icon: '📅', isUrl: true  },
 ] as const
 
 type DocKey = typeof DOCS[number]['key']

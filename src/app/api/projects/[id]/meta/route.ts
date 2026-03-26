@@ -13,7 +13,7 @@ export async function PATCH(
   const { id } = await params
   const body = await req.json()
 
-  const allowed = ['nicho', 'tipo_leads', 'twilio_cuenta', 'twilio_bundle', 'twilio_numero', 'twilio_saldo', 'tipo_integracion', 'doc_expediente', 'doc_flujograma', 'doc_cableado', 'accesos_brindados']
+  const allowed = ['nicho', 'tipo_leads', 'twilio_cuenta', 'twilio_bundle', 'twilio_numero', 'twilio_saldo', 'tipo_integracion', 'doc_expediente', 'doc_flujograma', 'doc_cableado', 'accesos_brindados', 'reunion_link']
   const update: Record<string, any> = {}
   for (const key of allowed) {
     if (key in body) update[key] = body[key] ?? null
