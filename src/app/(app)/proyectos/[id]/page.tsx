@@ -53,7 +53,7 @@ async function getData(id: string, profileId?: string, profileRole?: string, dev
     sb.from('project_developers').select('*, developer:developers(*)').eq('project_id', id),
     sb.from('meeting_briefs').select('id,title,meeting_date,drive_link,recording_url,transcript_raw,summary,decisions,action_items,participants,ai_confidence').eq('project_id', id).order('meeting_date',{ascending:false}).limit(50),
     sb.from('project_kpis').select('id,kpi_text,categoria,meta,confirmado').eq('project_id', id).order('created_at',{ascending:true}),
-    sb.from('notion_projects').select('id,etapas').eq('project_id', id).limit(1).maybeSingle(),
+    sb.from('notion_projects').select('id,etapas,cantidad_contratada,saldo_pendiente,plan_type').eq('project_id', id).limit(1).maybeSingle(),
   ])
   return {
     proyecto: projRes.data as Proyecto | null,
@@ -63,7 +63,7 @@ async function getData(id: string, profileId?: string, profileRole?: string, dev
     assigned: (assignedRes.data ?? []) as (ProjectDeveloper & { developer: Developer })[],
     meetingBriefs: (briefsRes.data ?? []) as any[],
     kpis: (kpisRes.data ?? []) as any[],
-    notionProject: notionRes.data as { id: string; etapas: string[] } | null,
+    notionProject: notionRes.data as { id: string; etapas: string[]; cantidad_contratada?: number; saldo_pendiente?: number; plan_type?: string } | null,
     navProjects: (navRes.data ?? []) as { id: string; nombre: string }[],
   }
 }
@@ -181,6 +181,25 @@ export default async function ProyectoDetalle({
             )}
           </div>
           <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:'8px',flexShrink:0}}>
+            {notionProject?.cantidad_contratada != null && (
+              <div style={{
+                display:'flex',flexDirection:'column',alignItems:'flex-end',
+                background:'rgba(232,121,47,0.08)',border:'1px solid rgba(232,121,47,0.20)',
+                borderRadius:'10px',padding:'8px 14px',
+              }}>
+                <span style={{fontSize:'10px',color:'#E8792F',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'2px'}}>
+                  💰 Monto contratado
+                </span>
+                <span style={{fontSize:'20px',fontWeight:800,color:'#fff',letterSpacing:'-0.02em'}}>
+                  ${notionProject.cantidad_contratada.toLocaleString('en-US')}
+                </span>
+                {notionProject.saldo_pendiente != null && notionProject.saldo_pendiente > 0 && (
+                  <span style={{fontSize:'11px',color:'#f59e0b',fontWeight:600,marginTop:'2px'}}>
+                    Saldo pendiente: ${notionProject.saldo_pendiente.toLocaleString('en-US')}
+                  </span>
+                )}
+              </div>
+            )}
             <StatusBadge estado={proyecto.estado}/>
             <ProjectKPIs kpis={kpis} projectId={id} />
           </div>
