@@ -163,7 +163,7 @@ export default function ProjectMetaEditor({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
+    <div style={{ display: 'flex', gap: '24px', marginTop: '10px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
 
       {/* Nicho + Tipo de leads */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -273,8 +273,11 @@ export default function ProjectMetaEditor({
         </div>
       </div>
 
+      {/* Divider */}
+      <div style={{ width: '1px', background: 'rgba(255,255,255,0.06)', alignSelf: 'stretch', minHeight: '40px' }} />
+
       {/* Twilio */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
         <span style={{ fontSize: '11px', color: '#E8792F', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>
           📞 Twilio
         </span>
@@ -284,37 +287,39 @@ export default function ProjectMetaEditor({
         <InlineField label="Saldo"   value={twilioSaldo}  placeholder="+ saldo"   onSave={v => saveTwilio('twilio_saldo',  v)} saving={saving} />
       </div>
 
+      {/* Divider */}
+      <div style={{ width: '1px', background: 'rgba(255,255,255,0.06)', alignSelf: 'stretch', minHeight: '40px' }} />
+
       {/* Tipo de integración */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
         <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>
           Integración
         </span>
-        <div style={{ display: 'flex', gap: '6px' }}>
-          {([
-            { value: 'chatbot'  as const, label: '🤖 Chatbot',   color: '#a78bfa', bg: 'rgba(167,139,250,0.10)', border: 'rgba(167,139,250,0.25)' },
-            { value: 'app_level' as const, label: '⚡ App Level', color: '#38bdf8', bg: 'rgba(56,189,248,0.10)',  border: 'rgba(56,189,248,0.25)' },
-          ] as const).map(opt => {
-            const isActive = tipoIntegracion === opt.value
-            return (
+        {([
+          { value: 'chatbot'   as const, label: '🤖 Chatbot' },
+          { value: 'app_level' as const, label: '⚡ App Level' },
+        ] as const).map(opt => {
+          const isActive = tipoIntegracion === opt.value
+          return (
+            <div key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '10px', color: '#475569', fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0, width: '70px' }}>{opt.label.split(' ')[1]}</span>
               <button
-                key={opt.value}
                 onClick={() => saveTipoIntegracion(opt.value)}
                 style={{
-                  fontSize: '11px', fontWeight: 700, padding: '4px 12px',
-                  borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s',
-                  background: isActive ? opt.bg : 'rgba(255,255,255,0.03)',
-                  color: isActive ? opt.color : '#475569',
-                  border: `1px solid ${isActive ? opt.border : 'rgba(255,255,255,0.07)'}`,
-                  boxShadow: isActive ? `0 0 10px ${opt.bg}` : 'none',
+                  fontSize: '11px', fontWeight: 600, padding: '2px 10px',
+                  borderRadius: '4px', cursor: 'pointer', transition: 'all 0.15s',
+                  background: isActive ? (opt.value === 'chatbot' ? 'rgba(167,139,250,0.12)' : 'rgba(56,189,248,0.12)') : 'rgba(255,255,255,0.03)',
+                  color: isActive ? (opt.value === 'chatbot' ? '#a78bfa' : '#38bdf8') : '#334155',
+                  border: `1px solid ${isActive ? (opt.value === 'chatbot' ? 'rgba(167,139,250,0.30)' : 'rgba(56,189,248,0.30)') : 'rgba(255,255,255,0.07)'}`,
                 }}
-                onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = opt.bg; e.currentTarget.style.color = opt.color; e.currentTarget.style.borderColor = opt.border } }}
-                onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = '#475569'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' } }}
+                onMouseEnter={e => { if (!isActive) e.currentTarget.style.borderColor = 'rgba(232,121,47,0.35)' }}
+                onMouseLeave={e => { if (!isActive) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}
               >
-                {saving ? '⏳' : opt.label}
+                {saving ? '⏳' : isActive ? '✓ Activo' : '+ Seleccionar'}
               </button>
-            )
-          })}
-        </div>
+            </div>
+          )
+        })}
       </div>
 
     </div>
