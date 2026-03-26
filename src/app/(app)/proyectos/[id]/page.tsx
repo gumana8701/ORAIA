@@ -161,7 +161,7 @@ export default async function ProyectoDetalle({
       </div>
 
       {/* Header */}
-      <div style={{background:'rgba(17,24,39,0.85)',border:'1px solid rgba(255,255,255,0.10)',borderRadius:'12px',padding:'24px',marginBottom:'24px',position:'relative',overflow:'hidden'}}>
+      <div style={{background:'rgba(17,24,39,0.85)',border:'1px solid rgba(255,255,255,0.10)',borderRadius:'12px',padding:'24px',marginBottom:'24px',position:'relative'}}>
         <div style={{position:'absolute',top:0,right:0,width:'192px',height:'192px',background:'rgba(232,121,47,0.04)',borderRadius:'50%',filter:'blur(60px)',pointerEvents:'none'}}/>
         <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:'16px',flexWrap:'wrap'}}>
           <div style={{flex:1,minWidth:0}}>
