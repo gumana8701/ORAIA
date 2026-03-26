@@ -7,7 +7,10 @@ const DOCS = [
   { key: 'doc_flujograma',    label: 'Flujograma',        icon: '🔀', isUrl: true  },
   { key: 'doc_cableado',      label: 'Cableado',          icon: '🔌', isUrl: true  },
   { key: 'accesos_brindados', label: 'Accesos brindados', icon: '🔑', isUrl: false },
-  { key: 'reunion_link',      label: 'Link reuniones',    icon: '📅', isUrl: true  },
+] as const
+
+const DOCS_ROW2 = [
+  { key: 'reunion_link', label: 'Link reuniones', icon: '📅', isUrl: true },
 ] as const
 
 type DocKey = typeof DOCS[number]['key']
@@ -101,19 +104,37 @@ export default function ProjectDocs({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-      {DOCS.map(d => (
-        <DocRow
-          key={d.key}
-          docKey={d.key}
-          label={d.label}
-          icon={d.icon}
-          isUrl={d.isUrl}
-          value={docs[d.key] ?? ''}
-          projectId={projectId}
-          onSaved={handleSaved}
-        />
-      ))}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      {/* Row 1: docs */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+        {DOCS.map(d => (
+          <DocRow
+            key={d.key}
+            docKey={d.key}
+            label={d.label}
+            icon={d.icon}
+            isUrl={d.isUrl}
+            value={docs[d.key] ?? ''}
+            projectId={projectId}
+            onSaved={handleSaved}
+          />
+        ))}
+      </div>
+      {/* Row 2: link reuniones */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+        {DOCS_ROW2.map(d => (
+          <DocRow
+            key={d.key}
+            docKey={d.key}
+            label={d.label}
+            icon={d.icon}
+            isUrl={d.isUrl}
+            value={docs[d.key] ?? ''}
+            projectId={projectId}
+            onSaved={handleSaved}
+          />
+        ))}
+      </div>
     </div>
   )
 }
