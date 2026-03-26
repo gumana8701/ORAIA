@@ -167,20 +167,18 @@ export default async function ProyectoDetalle({
               {proyecto.color_emoji && <span style={{fontSize:'18px'}}>{proyecto.color_emoji}</span>}
               <h1 style={{fontSize:'24px',fontWeight:800,color:'#fff',margin:0}}>{proyecto.nombre}</h1>
             </div>
-            <div style={{display:'flex',alignItems:'center',gap:'8px',flexWrap:'wrap'}}>
-              <p style={{color:'#A0AEC0',fontSize:'13px',margin:0}}>{proyecto.cliente}</p>
-              {proyecto.nicho && (
-                <span style={{
-                  fontSize:'11px',color:'#94a3b8',
-                  background:'rgba(255,255,255,0.05)',
-                  border:'1px solid rgba(255,255,255,0.09)',
-                  borderRadius:'5px',padding:'1px 8px',
-                  fontWeight:500,letterSpacing:'0.02em',
-                }}>
-                  {proyecto.nicho}
-                </span>
-              )}
-            </div>
+            {proyecto.nicho && (
+              <span style={{
+                display:'inline-block',
+                fontSize:'11px',color:'#94a3b8',
+                background:'rgba(255,255,255,0.05)',
+                border:'1px solid rgba(255,255,255,0.09)',
+                borderRadius:'5px',padding:'2px 10px',
+                fontWeight:500,letterSpacing:'0.03em',marginTop:'2px',
+              }}>
+                {proyecto.nicho}
+              </span>
+            )}
           </div>
           <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:'8px',flexShrink:0}}>
             <StatusBadge estado={proyecto.estado}/>
