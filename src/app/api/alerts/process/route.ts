@@ -30,12 +30,23 @@ async function slackPost(method: string, body: Record<string, any>) {
   return r.json()
 }
 
-const ALERT_COPY: Record<string, { emoji: string; header: string; detail: string; btn: string }> = {
+// CS team Slack IDs — Jennifer & Trina
+const CS_MENTIONS = '<@U09220MVB33> <@U09BGLR8C02>'
+
+const ALERT_COPY: Record<string, { emoji: string; header: string; detail: string; btn: string; cs?: boolean }> = {
   kpi_missing: {
     emoji: '📊',
     header: 'KPIs no definidos',
     detail: 'El proyecto fue onboarded pero aún no tiene KPIs definidos. Sin KPIs no podemos medir el éxito del proyecto.',
     btn: '📝 Agregar KPIs',
+    cs: true,
+  },
+  nicho_missing: {
+    emoji: '🎯',
+    header: 'Nicho del cliente no definido',
+    detail: 'Han pasado 6 horas desde el onboarding y el nicho del cliente aún no ha sido completado. El expediente de la reunión ya debería estar disponible.',
+    btn: '🎯 Completar nicho',
+    cs: true,
   },
   services_missing: {
     emoji: '📋',
@@ -61,11 +72,13 @@ async function sendAlert(alert: any, isFollowUp = false): Promise<string | null>
     ? `${copy.emoji} *Recordatorio #${alert.send_count + 1}* — ${copy.header}`
     : `${copy.emoji} *${copy.header}* — acción requerida`
 
+  const csLine = copy.cs ? `\n👥 Asignado a: ${CS_MENTIONS}` : ''
+
   const body: Record<string, any> = {
     channel: alert.slack_channel_id,
-    text: `${header}\n\n*${nombre}* — ${copy.detail}\n\n👉 <${destUrl}|${copy.btn}>`,
+    text: `${header}\n\n*${nombre}* — ${copy.detail}${csLine}\n\n👉 <${destUrl}|${copy.btn}>`,
     blocks: [
-      { type: 'section', text: { type: 'mrkdwn', text: `${header}\n\n*${nombre}* — ${copy.detail}` } },
+      { type: 'section', text: { type: 'mrkdwn', text: `${header}\n\n*${nombre}* — ${copy.detail}${csLine}` } },
       { type: 'actions', elements: [{ type: 'button', text: { type: 'plain_text', text: copy.btn }, url: destUrl, style: 'primary' }] },
       { type: 'context', elements: [{ type: 'mrkdwn', text: `_Recordatorio ${alert.send_count + 1} de ${alert.max_sends} · Se repetirá cada 24h hasta completar_` }] },
     ],
@@ -94,7 +107,7 @@ export async function POST(req: NextRequest) {
     .select('*')
     .eq('status', 'pending')
     .lte('send_after', now.toISOString())
-    .in('alert_type', ['kpi_missing', 'services_missing', 'ticket_blocked'])
+    .in('alert_type', ['kpi_missing', 'nicho_missing', 'services_missing', 'ticket_blocked'])
 
   for (const alert of pending || []) {
     if (!alert.slack_channel_id) continue
@@ -115,7 +128,7 @@ export async function POST(req: NextRequest) {
     .select('*')
     .eq('status', 'open')
     .lte('last_sent_at', cutoff)
-    .in('alert_type', ['kpi_missing', 'services_missing', 'ticket_blocked'])
+    .in('alert_type', ['kpi_missing', 'nicho_missing', 'services_missing', 'ticket_blocked'])
 
   for (const alert of (open || []).filter((a: any) => a.send_count < a.max_sends)) {
     if (!alert.slack_channel_id) continue

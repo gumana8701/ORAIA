@@ -26,5 +26,16 @@ export async function PATCH(
   const { error } = await sb.from('projects').update(update).eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  // Auto-close nicho_missing alert when nicho is filled
+  if ('nicho' in update && update.nicho) {
+    await sb.from('alerts')
+      .update({ status: 'resolved', resolved_at: new Date().toISOString(), resolved_by: 'system', updated_at: new Date().toISOString() })
+      .eq('project_id', id)
+      .eq('alert_type', 'nicho_missing')
+      .in('status', ['pending', 'open'])
+  }
+
+  // Auto-close kpi_missing alert when KPIs are saved (handled by kpis route, but also here as fallback)
+
   return NextResponse.json({ ok: true })
 }

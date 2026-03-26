@@ -401,6 +401,9 @@ Responde SOLO con JSON válido:
       { ...alertBase, project_id: projectId, alert_type: 'kpi_missing',
         title: `KPIs no definidos — ${projectName.trim()}`,
         descripcion: `KPIs no definidos — ${projectName.trim()}` },
+      { ...alertBase, project_id: projectId, alert_type: 'nicho_missing',
+        title: `Nicho no definido — ${projectName.trim()}`,
+        descripcion: `Nicho no definido — ${projectName.trim()}` },
     ]
     // If Gemini couldn't detect services, queue a services_missing alert too
     if (!results.welcomeCall?.extracted?.servicios) {

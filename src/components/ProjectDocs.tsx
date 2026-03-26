@@ -13,7 +13,7 @@ const DOCS_ROW2 = [
   { key: 'reunion_link', label: 'Link reuniones', icon: '📅', isUrl: true },
 ] as const
 
-type DocKey = typeof DOCS[number]['key']
+type DocKey = typeof DOCS[number]['key'] | typeof DOCS_ROW2[number]['key']
 
 function DocRow({
   docKey, label, icon, isUrl, value, projectId, onSaved,
