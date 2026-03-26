@@ -76,6 +76,7 @@ export default function ProjectMetaEditor({
   initialTwilioBundle,
   initialTwilioNumero,
   initialTwilioSaldo,
+  initialTipoIntegracion,
 }: {
   projectId: string
   initialNicho?: string | null
