@@ -20,6 +20,7 @@ export interface Proyecto {
   created_at?: string
   updated_at?: string
   nicho?: string
+  tipo_leads?: 'campaña' | 'base_de_datos' | 'ambos'
 }
 
 export interface Mensaje {

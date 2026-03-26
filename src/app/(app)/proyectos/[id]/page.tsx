@@ -179,6 +179,25 @@ export default async function ProyectoDetalle({
                 {proyecto.nicho}
               </span>
             )}
+            {proyecto.tipo_leads && (
+              <div style={{marginTop:'10px',display:'flex',alignItems:'center',gap:'8px'}}>
+                <span style={{fontSize:'11px',color:'#475569',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.05em'}}>
+                  Tipo de leads
+                </span>
+                <span style={{
+                  fontSize:'11px',fontWeight:700,padding:'2px 10px',borderRadius:'5px',
+                  ...(proyecto.tipo_leads === 'campaña'
+                    ? {background:'rgba(59,130,246,0.10)',color:'#60a5fa',border:'1px solid rgba(59,130,246,0.20)'}
+                    : proyecto.tipo_leads === 'base_de_datos'
+                    ? {background:'rgba(34,197,94,0.10)',color:'#4ade80',border:'1px solid rgba(34,197,94,0.20)'}
+                    : {background:'rgba(232,121,47,0.10)',color:'#E8792F',border:'1px solid rgba(232,121,47,0.20)'}),
+                }}>
+                  {proyecto.tipo_leads === 'campaña' ? '📣 Campaña'
+                    : proyecto.tipo_leads === 'base_de_datos' ? '🗃 Base de datos'
+                    : '📣🗃 Ambos'}
+                </span>
+              </div>
+            )}
           </div>
           <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:'8px',flexShrink:0}}>
             {notionProject?.cantidad_contratada != null && (
