@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { Suspense } from 'react'
 import ProjectCard from '@/components/ProjectCard'
 import ProjectFilters from '@/components/ProjectFilters'
+import PMDashboard from '@/components/PMDashboard'
 
 import { Proyecto } from '@/lib/types'
 import { getSessionProfile, getAllowedProjectIds } from '@/lib/auth'
@@ -82,19 +83,9 @@ export default async function Dashboard({
   if (color)  filtered = filtered.filter(p => p.color_emoji === color)
   if (dev)    filtered = filtered.filter(p => (devsByProject[p.id] ?? []).some((d: any) => d.nombre === dev))
 
-  const activos      = proyectos.filter(p => p.estado === 'activo').length
-  const enRiesgo     = proyectos.filter(p => p.estado === 'en_riesgo').length
-  const totalAlertas = proyectos.reduce((acc, p) => acc + (p.alertas_count ?? 0), 0)
   const enRiesgoFiltered = filtered.filter(p => p.estado === 'en_riesgo')
   const restoFiltered    = filtered.filter(p => p.estado !== 'en_riesgo')
   const isFiltering      = !!(q || status || color || dev)
-
-  const stats = [
-    { label: 'Activos',       value: activos,      sub: 'en curso',        color: '#E8792F', icon: '🟠' },
-    { label: 'En Riesgo',     value: enRiesgo,     sub: 'requieren atención', color: '#ef4444', icon: '🔴' },
-    { label: 'Alertas',       value: totalAlertas, sub: 'sin resolver',    color: '#f59e0b', icon: '⚠️' },
-    { label: 'Msgs Hoy',      value: mensajesHoy,  sub: 'actividad hoy',   color: '#3b82f6', icon: '💬' },
-  ]
 
   return (
     <div style={{ position: 'relative' }}>
@@ -108,10 +99,10 @@ export default async function Dashboard({
       }}/>
 
       {/* Header */}
-      <div style={{ marginBottom: '28px', position: 'relative', zIndex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+      <div style={{ marginBottom: '20px', position: 'relative', zIndex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
           <h1 className="headline headline-gradient" style={{ margin: 0 }}>
-            Proyectos
+            Operations Dashboard
           </h1>
           <span style={{
             fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '6px',
@@ -123,36 +114,17 @@ export default async function Dashboard({
           </span>
         </div>
         <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>
-          Vista en tiempo real · {proyectos.length} proyecto{proyectos.length !== 1 ? 's' : ''}
+          ORA IA · {proyectos.length} proyectos · tiempo real
         </p>
       </div>
 
-      {/* Stats row */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px',
-        marginBottom: '28px', position: 'relative', zIndex: 1,
-      }}>
-        {stats.map(stat => (
-          <div key={stat.label} className="stat-card" style={{ borderColor: `${stat.color}18` }}>
-            {/* Icon + number */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-              <span style={{ fontSize: '22px' }}>{stat.icon}</span>
-              <span style={{
-                fontSize: '28px', fontWeight: 800, color: stat.color,
-                lineHeight: 1, letterSpacing: '-0.02em',
-              }}>{stat.value}</span>
-            </div>
-            <p style={{ fontSize: '12px', fontWeight: 600, color: '#e2e8f0', margin: '0 0 2px' }}>{stat.label}</p>
-            <p style={{ fontSize: '10px', color: '#475569', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{stat.sub}</p>
-            {/* Bottom color line */}
-            <div style={{
-              position: 'absolute', bottom: 0, left: '20%', right: '20%', height: '2px',
-              background: `linear-gradient(90deg, transparent, ${stat.color}50, transparent)`,
-              borderRadius: '2px',
-            }}/>
-          </div>
-        ))}
+      {/* PM Dashboard — main section */}
+      <div style={{ marginBottom: '32px', position: 'relative', zIndex: 1 }}>
+        <PMDashboard />
       </div>
+
+      {/* Divider */}
+      <div style={{ height: '1px', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)', marginBottom: '24px', position: 'relative', zIndex: 1 }} />
 
       {/* Filters */}
       <div style={{ position: 'relative', zIndex: 1 }}>
