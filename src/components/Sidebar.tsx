@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react'
 const allNav = [
   { href: '/insights',            label: 'Insights',     icon: '📊', adminOnly: false },
   { href: '/',                    label: 'Proyectos',    icon: '📂', adminOnly: false },
-  { href: '/alertas',             label: 'Alertas',      icon: '⚠️',  adminOnly: true  },
+  // Alertas removido del menú — integrado en tab "Estado del Proyecto" por proyecto
   { href: '/admin/onboarding',    label: 'Onboarding',   icon: '🚀', adminOnly: true  },
   { href: '/admin/usuarios',      label: 'Usuarios',     icon: '🔐', adminOnly: true  },
   { href: '/admin/notion-link',   label: 'Notion Link',  icon: '📋', adminOnly: false },

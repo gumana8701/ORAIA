@@ -13,6 +13,7 @@ import ProjectTasksTab from '@/components/ProjectTasksTab'
 import { getSessionProfile } from '@/lib/auth'
 import ProjectMetaEditor from '@/components/ProjectMetaEditor'
 import ProjectDocs from '@/components/ProjectDocs'
+import EstadoProyectoTab from '@/components/EstadoProyectoTab'
 
 const nivelColor: Record<string, string> = {
   critico: '#ef4444', alto: '#f97316', medio: '#f59e0b', bajo: '#6b7280',
@@ -91,7 +92,7 @@ export default async function ProyectoDetalle({
   const totalActivity = mensajes.length + meetingBriefs.length
   const tabs = [
     {key:'actividad',  label:`📋 Actividad${totalActivity>0?' ('+totalActivity+')':''}`},
-    ...(isAdmin ? [{key:'alertas', label:`⚠️ Alertas${alertas.length>0?' ('+alertas.length+')':''}`}] : []),
+    {key:'estado',     label:`🧠 Estado${alertas.length>0?' ⚠️'+alertas.length:''}`},
     {key:'tareas',     label:'✅ Tareas'},
     {key:'notion',     label:'📋 Notion'},
     ...(isAdmin ? [{key:'onboarding', label:'🚀 Onboarding'}] : []),
@@ -326,24 +327,9 @@ export default async function ProyectoDetalle({
         />
       )}
 
-      {/* Tab: Alerts */}
-      {tab==='alertas' && (
-        <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
-          {alertas.length===0 ? (
-            <div style={{textAlign:'center',padding:'40px',color:'#22c55e',background:'rgba(17,24,39,0.85)',border:'1px solid rgba(255,255,255,0.10)',borderRadius:'12px'}}>✅ Sin alertas activas</div>
-          ) : alertas.map(a => (
-            <div key={a.id} style={{background:'rgba(17,24,39,0.85)',border:`1px solid ${nivelColor[a.nivel]}30`,borderLeft:`3px solid ${nivelColor[a.nivel]}`,borderRadius:'8px',padding:'12px 16px',display:'flex',gap:'12px',alignItems:'flex-start'}}>
-              <span style={{fontSize:'18px',flexShrink:0}}>{tipoIcon[a.tipo]??'⚠️'}</span>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{display:'flex',gap:'8px',alignItems:'center',marginBottom:'4px',flexWrap:'wrap'}}>
-                  <span style={{fontSize:'11px',padding:'1px 6px',borderRadius:'4px',background:`${nivelColor[a.nivel]}20`,color:nivelColor[a.nivel],fontWeight:700,textTransform:'uppercase'}}>{a.nivel}</span>
-                  <span style={{fontSize:'11px',color:'#A0AEC0',textTransform:'capitalize'}}>{a.tipo}</span>
-                </div>
-                <p style={{fontSize:'13px',color:'#cbd5e0',margin:0,lineHeight:1.5}}>{a.descripcion}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+      {/* Tab: Estado del Proyecto (AI + Alertas) */}
+      {activeTab==='estado' && (
+        <EstadoProyectoTab projectId={id} />
       )}
 
       {/* Tab: Tareas */}
