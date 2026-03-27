@@ -1,6 +1,22 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 
+interface SubTask {
+  id: string
+  title: string
+  completed: boolean
+  status: 'pendiente' | 'en_progreso' | 'bloqueado' | 'completado'
+  assignee: string | null
+  completed_by: string | null
+  created_at: string
+  completed_at: string | null
+  started_at: string | null
+  time_pendiente_seconds: number
+  time_bloqueado_seconds: number
+  parent_task_id: string
+  project_id: string
+}
+
 interface Task {
   id: string
   title: string
@@ -10,6 +26,9 @@ interface Task {
   category: string | null
   assignee: string | null
   notes: string | null
+  parent_task_id: string | null
+  completed_by: string | null
+  subtasks?: SubTask[]
 }
 
 interface Comment {
@@ -35,6 +54,113 @@ function timeAgo(iso: string) {
   if (diff < 3600) return `hace ${Math.floor(diff/60)}m`
   if (diff < 86400) return `hace ${Math.floor(diff/3600)}h`
   return `hace ${Math.floor(diff/86400)}d`
+}
+
+function formatDuration(secs: number) {
+  if (!secs) return null
+  const h = Math.floor(secs / 3600)
+  const m = Math.floor((secs % 3600) / 60)
+  if (h > 0) return `${h}h ${m}m`
+  return `${m}m`
+}
+
+// ── Subtask Row Component ────────────────────────────────────────────────────
+function SubTaskRow({
+  sub, projectId, currentUser, onUpdate,
+}: {
+  sub: SubTask; projectId: string; currentUser: string; onUpdate: (updated: SubTask) => void
+}) {
+  const [updating, setUpdating] = useState(false)
+  const cfg = STATUS_CONFIG[sub.status] || STATUS_CONFIG.pendiente
+
+  async function changeSubStatus(newStatus: SubTask['status']) {
+    if (updating || newStatus === sub.status) return
+    setUpdating(true)
+    const res = await fetch(`/api/projects/${projectId}/tasks`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        taskId: sub.id,
+        status: newStatus,
+        author: currentUser,
+        completed_by: newStatus === 'completado' ? currentUser : undefined,
+      }),
+    })
+    const data = await res.json()
+    if (data.id) onUpdate({ ...sub, ...data })
+    setUpdating(false)
+  }
+
+  const elapsed = (sub.time_pendiente_seconds || 0) + (sub.time_bloqueado_seconds || 0)
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '8px',
+      padding: '6px 10px', borderRadius: '6px',
+      background: sub.completed ? 'rgba(34,197,94,0.04)' : 'rgba(255,255,255,0.03)',
+      border: `1px solid ${sub.completed ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.06)'}`,
+      marginBottom: '4px',
+    }}>
+      {/* Status dot */}
+      <div style={{
+        width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
+        background: cfg.dot,
+      }} />
+
+      {/* Title */}
+      <span style={{
+        flex: 1, fontSize: '12px',
+        color: sub.completed ? '#475569' : '#cbd5e0',
+        textDecoration: sub.completed ? 'line-through' : 'none',
+        lineHeight: 1.4,
+      }}>
+        {sub.title}
+      </span>
+
+      {/* Assignee */}
+      {sub.assignee && (
+        <span style={{
+          fontSize: '10px', color: '#E8792F', fontWeight: 600,
+          padding: '2px 6px', borderRadius: '4px',
+          background: 'rgba(232,121,47,0.08)', border: '1px solid rgba(232,121,47,0.2)',
+          flexShrink: 0,
+        }}>
+          {sub.assignee.split(' ')[0]}
+        </span>
+      )}
+
+      {/* Time elapsed */}
+      {elapsed > 0 && (
+        <span style={{ fontSize: '10px', color: '#475569', flexShrink: 0 }}>
+          ⏱ {formatDuration(elapsed)}
+        </span>
+      )}
+
+      {/* Completed by */}
+      {sub.completed && sub.completed_by && (
+        <span style={{ fontSize: '10px', color: '#22c55e', flexShrink: 0 }}>
+          ✓ {sub.completed_by.split(' ')[0]}
+        </span>
+      )}
+
+      {/* Status selector (compact) */}
+      <select
+        value={sub.status}
+        disabled={updating}
+        onClick={e => e.stopPropagation()}
+        onChange={e => changeSubStatus(e.target.value as SubTask['status'])}
+        style={{
+          flexShrink: 0, fontSize: '10px', fontWeight: 600, cursor: 'pointer',
+          background: cfg.bg, border: `1px solid ${cfg.dot}55`,
+          borderRadius: '4px', color: cfg.color, outline: 'none', padding: '2px 4px',
+        }}
+      >
+        {Object.entries(STATUS_CONFIG).map(([k, c]) => (
+          <option key={k} value={k} style={{ background: '#1e293b', color: '#f1f5f9' }}>{c.label}</option>
+        ))}
+      </select>
+    </div>
+  )
 }
 
 // ── Ticket Modal ─────────────────────────────────────────────────────────────
@@ -346,6 +472,11 @@ export default function ProjectTasksTab({ projectId, canAddTasks = false }: { pr
   const [newTaskAssignee, setNewTaskAssignee] = useState('')
   const [savingTask, setSavingTask] = useState(false)
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'voice' | 'chat'>('all')
+  // Subtask state
+  const [expandedSubtasks, setExpandedSubtasks] = useState<Set<string>>(new Set())
+  const [addingSubtask, setAddingSubtask] = useState<string | null>(null) // taskId
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState('')
+  const [savingSubtask, setSavingSubtask] = useState(false)
 
   const TEAM = [
     'Enzo ORA IA', 'Héctor Ramirez', 'Victor Ramirez', 'Brenda Cruz',
@@ -404,12 +535,54 @@ export default function ProjectTasksTab({ projectId, canAddTasks = false }: { pr
     })
     const data = await res.json()
     if (data.id) {
-      setTasks(prev => [...prev, data])
+      setTasks(prev => [...prev, { ...data, subtasks: [] }])
       setNewTaskTitle('')
       setNewTaskAssignee('')
       setAddingTask(false)
     }
     setSavingTask(false)
+  }
+
+  async function addSubtask(parentTaskId: string) {
+    if (!newSubtaskTitle.trim()) return
+    setSavingSubtask(true)
+    const res = await fetch(`/api/projects/${projectId}/tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: newSubtaskTitle.trim(),
+        parent_task_id: parentTaskId,
+        author: 'Equipo',
+      }),
+    })
+    const data = await res.json()
+    if (data.id) {
+      setTasks(prev => prev.map(t =>
+        t.id === parentTaskId
+          ? { ...t, subtasks: [...(t.subtasks || []), data] }
+          : t
+      ))
+      setNewSubtaskTitle('')
+      setAddingSubtask(null)
+    }
+    setSavingSubtask(false)
+  }
+
+  function updateSubtaskInState(taskId: string, updated: SubTask) {
+    setTasks(prev => prev.map(t =>
+      t.id === taskId
+        ? { ...t, subtasks: (t.subtasks || []).map(s => s.id === updated.id ? updated : s) }
+        : t
+    ))
+  }
+
+  function toggleSubtasks(taskId: string) {
+    setExpandedSubtasks(prev => {
+      const next = new Set(prev)
+      if (next.has(taskId)) next.delete(taskId)
+      else next.add(taskId)
+      return next
+    })
   }
 
   if (loading) {
@@ -619,8 +792,98 @@ export default function ProjectTasksTab({ projectId, canAddTasks = false }: { pr
                       {cfg.label}
                     </span>
 
+                    {/* Subtask count badge */}
+                    {((task.subtasks?.length ?? 0) > 0) && (
+                      <span
+                        onClick={e => { e.stopPropagation(); toggleSubtasks(task.id) }}
+                        style={{
+                          fontSize: '10px', fontWeight: 700, flexShrink: 0, cursor: 'pointer',
+                          padding: '2px 7px', borderRadius: '10px',
+                          background: 'rgba(148,163,184,0.1)', border: '1px solid rgba(148,163,184,0.2)',
+                          color: task.subtasks!.every(s => s.completed) ? '#22c55e' : '#94a3b8',
+                        }}
+                        title="Ver subtareas"
+                      >
+                        {task.subtasks!.filter(s => s.completed).length}/{task.subtasks!.length} ✓
+                      </span>
+                    )}
+
+                    {/* Toggle subtasks chevron */}
+                    <span
+                      onClick={e => { e.stopPropagation(); toggleSubtasks(task.id) }}
+                      style={{ color: '#334155', fontSize: '11px', flexShrink: 0, cursor: 'pointer', userSelect: 'none' }}
+                      title={expandedSubtasks.has(task.id) ? 'Ocultar subtareas' : 'Ver subtareas'}
+                    >
+                      {expandedSubtasks.has(task.id) ? '▾' : '▸'}
+                    </span>
+
                     <span onClick={() => setSelectedTask(task)} style={{ color: '#334155', fontSize: '12px', flexShrink: 0, cursor: 'pointer' }}>›</span>
                   </div>
+
+                  {/* Subtask list (expanded) */}
+                  {expandedSubtasks.has(task.id) && (
+                    <div style={{
+                      marginTop: '8px', paddingLeft: '20px',
+                      borderLeft: '2px solid rgba(255,255,255,0.06)',
+                    }}>
+                      {(task.subtasks || []).length === 0 && (
+                        <p style={{ fontSize: '11px', color: '#334155', margin: '0 0 6px' }}>Sin subtareas</p>
+                      )}
+                      {(task.subtasks || []).map(sub => (
+                        <SubTaskRow
+                          key={sub.id}
+                          sub={sub}
+                          projectId={projectId}
+                          currentUser="Equipo"
+                          onUpdate={updated => updateSubtaskInState(task.id, updated)}
+                        />
+                      ))}
+
+                      {/* Add subtask inline form */}
+                      {addingSubtask === task.id ? (
+                        <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                          <input
+                            autoFocus
+                            type="text"
+                            value={newSubtaskTitle}
+                            onChange={e => setNewSubtaskTitle(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') addSubtask(task.id)
+                              if (e.key === 'Escape') { setAddingSubtask(null); setNewSubtaskTitle('') }
+                            }}
+                            placeholder="Nombre de la subtarea..."
+                            style={{
+                              flex: 1, background: 'rgba(255,255,255,0.05)',
+                              border: '1px solid rgba(255,255,255,0.12)', borderRadius: '6px',
+                              padding: '5px 9px', fontSize: '12px', color: '#f1f5f9', outline: 'none',
+                            }}
+                          />
+                          <button
+                            onClick={() => addSubtask(task.id)}
+                            disabled={savingSubtask || !newSubtaskTitle.trim()}
+                            style={{ padding: '4px 10px', borderRadius: '6px', background: '#E8792F', border: 'none', color: '#fff', fontSize: '11px', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+                          >
+                            {savingSubtask ? '...' : '✓'}
+                          </button>
+                          <button
+                            onClick={() => { setAddingSubtask(null); setNewSubtaskTitle('') }}
+                            style={{ padding: '4px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.06)', border: 'none', color: '#64748b', fontSize: '11px', cursor: 'pointer', flexShrink: 0 }}
+                          >✕</button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={e => { e.stopPropagation(); setAddingSubtask(task.id); setNewSubtaskTitle('') }}
+                          style={{
+                            marginTop: '4px', padding: '3px 10px', borderRadius: '5px', fontSize: '11px', fontWeight: 600,
+                            background: 'transparent', border: '1px dashed rgba(255,255,255,0.12)',
+                            color: '#475569', cursor: 'pointer',
+                          }}
+                        >
+                          + Subtarea
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )

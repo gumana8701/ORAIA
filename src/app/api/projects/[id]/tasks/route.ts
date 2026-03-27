@@ -23,6 +23,7 @@ async function getProject(projectId: string) {
 }
 
 // ── GET /api/projects/[id]/tasks ─────────────────────────────────────────────
+// Returns only top-level tasks (parent_task_id IS NULL) with nested subtasks
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -30,23 +31,35 @@ export async function GET(
   const { id } = await params
   const { data, error } = await sb
     .from('project_tasks')
-    .select('*')
+    .select('*, subtasks:project_tasks!parent_task_id(*)')
     .eq('project_id', id)
+    .is('parent_task_id', null)
     .order('order_index')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data || [])
 }
 
-// ── POST /api/projects/[id]/tasks — create task ───────────────────────────────
+// ── POST /api/projects/[id]/tasks — create task or subtask ───────────────────
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const { title, category, assignee, author } = await req.json()
+  const { title, category, assignee, author, parent_task_id } = await req.json()
 
   if (!title?.trim()) return NextResponse.json({ error: 'title required' }, { status: 400 })
+
+  // If subtask, inherit assignee from parent if not provided
+  let resolvedAssignee = assignee || null
+  if (parent_task_id && !assignee) {
+    const { data: parent } = await sb
+      .from('project_tasks')
+      .select('assignee')
+      .eq('id', parent_task_id)
+      .single()
+    resolvedAssignee = parent?.assignee || null
+  }
 
   const { data: existing } = await sb
     .from('project_tasks')
@@ -67,8 +80,9 @@ export async function POST(
       order_index: nextIndex,
       completed: false,
       status: 'pendiente',
-      assignee: assignee || null,
+      assignee: resolvedAssignee,
       status_changed_at: now,
+      parent_task_id: parent_task_id || null,
     })
     .select()
     .single()
@@ -85,32 +99,45 @@ export async function POST(
     duration_seconds: 0,
   })
 
-  // Slack alert
-  const proj = await getProject(id)
-  if (proj?.slack_channel_id) {
-    await slackPost('chat.postMessage', {
-      channel: proj.slack_channel_id,
-      text: `📋 *Nueva tarea agregada*${assignee ? ` — asignada a *${assignee}*` : ''}:\n> ${title.trim()}`,
-    })
+  // Slack alert — only for top-level tasks
+  if (!parent_task_id) {
+    const proj = await getProject(id)
+    if (proj?.slack_channel_id) {
+      await slackPost('chat.postMessage', {
+        channel: proj.slack_channel_id,
+        text: `📋 *Nueva tarea agregada*${resolvedAssignee ? ` — asignada a *${resolvedAssignee}*` : ''}:\n> ${title.trim()}`,
+      })
+    }
   }
 
   return NextResponse.json(task)
 }
 
-// ── PATCH /api/projects/[id]/tasks — update task ─────────────────────────────
+// ── PATCH /api/projects/[id]/tasks — update task or subtask ──────────────────
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const { taskId, completed, status, notes, assignee, author } = await req.json()
+  const { taskId, completed, status, notes, assignee, author, completed_by } = await req.json()
 
   // Fetch current task state
   const { data: current } = await sb
     .from('project_tasks')
-    .select('title, status, status_changed_at, time_pendiente_seconds, time_bloqueado_seconds, time_completado_seconds, started_at')
+    .select('title, status, status_changed_at, time_pendiente_seconds, time_bloqueado_seconds, time_completado_seconds, started_at, parent_task_id')
     .eq('id', taskId)
-    .single() as { data: { title: string; status: string; status_changed_at: string | null; started_at: string | null; time_pendiente_seconds: number; time_bloqueado_seconds: number; time_completado_seconds: number } | null }
+    .single() as {
+      data: {
+        title: string
+        status: string
+        status_changed_at: string | null
+        started_at: string | null
+        time_pendiente_seconds: number
+        time_bloqueado_seconds: number
+        time_completado_seconds: number
+        parent_task_id: string | null
+      } | null
+    }
 
   const now = new Date()
   const patch: Record<string, any> = { updated_at: now.toISOString() }
@@ -123,7 +150,10 @@ export async function PATCH(
   if (newStatus !== undefined) {
     patch.status = newStatus
     patch.completed = newStatus === 'completado'
-    if (newStatus === 'completado') patch.completed_at = now.toISOString()
+    if (newStatus === 'completado') {
+      patch.completed_at = now.toISOString()
+      patch.completed_by = completed_by || author || 'Equipo'
+    }
     if (newStatus === 'en_progreso' && !current?.started_at) patch.started_at = now.toISOString()
     patch.status_changed_at = now.toISOString()
   }
@@ -160,8 +190,8 @@ export async function PATCH(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Slack alert on status change
-  if (current && newStatus && newStatus !== current.status) {
+  // Slack alert on status change — only for top-level tasks
+  if (current && newStatus && newStatus !== current.status && !current.parent_task_id) {
     const proj = await getProject(id)
     if (proj?.slack_channel_id) {
       const emoji = newStatus === 'completado' ? '✅' : newStatus === 'bloqueado' ? '🚫' : '🔄'
