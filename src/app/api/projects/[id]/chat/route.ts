@@ -10,7 +10,7 @@ const sb = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
-const GEMINI_KEY = process.env.GEMINI_API_KEY
+const GEMINI_KEY = process.env.GEMINI_API_KEY || 'AIzaSyBjs8PfHpaQID7r_Wo7pcAeiEuLKnGKt5A'
 
 async function getProjectContext(projectId: string, query: string) {
   const queryLower = query.toLowerCase()
