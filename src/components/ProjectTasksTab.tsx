@@ -351,6 +351,58 @@ function TaskDrawer({
                 ))}
               </select>
             </div>
+            {/* Priority + Due Date row */}
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '14px' }}>
+              {/* Priority */}
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '4px' }}>
+                  🔥 Prioridad
+                </label>
+                <select
+                  defaultValue={(task as any).priority || 'normal'}
+                  onChange={async e => {
+                    const priority = e.target.value
+                    await fetch(`/api/projects/${projectId}/tasks`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ taskId: task.id, priority, author: 'Equipo' }),
+                    })
+                    ;(task as any).priority = priority
+                  }}
+                  style={{
+                    width: '100%', background: '#fff', border: '1px solid #e2e8f0',
+                    borderRadius: '8px', padding: '7px 10px', fontSize: '13px', color: '#111827', outline: 'none',
+                  }}
+                >
+                  <option value="alta" style={{ color: '#ef4444', fontWeight: 700 }}>🔴 Alta</option>
+                  <option value="normal" style={{ color: '#111827' }}>🟡 Normal</option>
+                  <option value="baja" style={{ color: '#6b7280' }}>⚪ Baja</option>
+                </select>
+              </div>
+              {/* Due date */}
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '4px' }}>
+                  📅 Fecha límite
+                </label>
+                <input
+                  type="date"
+                  defaultValue={(task as any).due_date || ''}
+                  onChange={async e => {
+                    const due_date = e.target.value || null
+                    await fetch(`/api/projects/${projectId}/tasks`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ taskId: task.id, due_date, author: 'Equipo' }),
+                    })
+                    ;(task as any).due_date = due_date
+                  }}
+                  style={{
+                    width: '100%', boxSizing: 'border-box', background: '#fff', border: '1px solid #e2e8f0',
+                    borderRadius: '8px', padding: '7px 10px', fontSize: '13px', color: '#111827', outline: 'none',
+                  }}
+                />
+              </div>
+            </div>
             {/* Status selector */}
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               {(Object.entries(STATUS_CONFIG) as [Task['status'], typeof STATUS_CONFIG[keyof typeof STATUS_CONFIG]][]).map(([key, c]) => (
@@ -784,6 +836,23 @@ export default function ProjectTasksTab({ projectId, canAddTasks = false }: { pr
                       ))}
                     </select>
 
+                    {/* Priority badge */}
+                    {(task as any).priority === 'alta' && (
+                      <span style={{ fontSize: '9px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        🔴 ALTA
+                      </span>
+                    )}
+                    {/* Due date badge */}
+                    {(task as any).due_date && task.status !== 'completado' && (() => {
+                      const daysLeft = Math.ceil((new Date((task as any).due_date).getTime() - Date.now()) / 86400000)
+                      const overdue = daysLeft < 0
+                      const soon = daysLeft <= 2
+                      return (
+                        <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 6px', borderRadius: '4px', flexShrink: 0, background: overdue ? 'rgba(239,68,68,0.12)' : soon ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.05)', color: overdue ? '#ef4444' : soon ? '#f59e0b' : '#475569', border: `1px solid ${overdue ? 'rgba(239,68,68,0.25)' : soon ? 'rgba(245,158,11,0.25)' : 'rgba(255,255,255,0.08)'}` }}>
+                          📅 {overdue ? `${Math.abs(daysLeft)}d vencida` : daysLeft === 0 ? 'hoy' : `${daysLeft}d`}
+                        </span>
+                      )
+                    })()}
                     {/* Status badge */}
                     <span
                       onClick={() => setSelectedTask(task)}

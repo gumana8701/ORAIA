@@ -119,12 +119,12 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const { taskId, completed, status, notes, assignee, author, completed_by } = await req.json()
+  const { taskId, completed, status, notes, assignee, author, completed_by, priority, due_date } = await req.json()
 
   // Fetch current task state
   const { data: current } = await sb
     .from('project_tasks')
-    .select('title, status, status_changed_at, time_pendiente_seconds, time_bloqueado_seconds, time_completado_seconds, started_at, parent_task_id')
+    .select('title, status, status_changed_at, time_pendiente_seconds, time_bloqueado_seconds, time_completado_seconds, started_at, parent_task_id, priority, due_date, assignee')
     .eq('id', taskId)
     .single() as {
       data: {
@@ -136,6 +136,9 @@ export async function PATCH(
         time_bloqueado_seconds: number
         time_completado_seconds: number
         parent_task_id: string | null
+        priority: string | null
+        due_date: string | null
+        assignee: string | null
       } | null
     }
 
@@ -159,6 +162,8 @@ export async function PATCH(
   }
   if (notes !== undefined) patch.notes = notes
   if (assignee !== undefined) patch.assignee = assignee
+  if (priority !== undefined) patch.priority = priority
+  if (due_date !== undefined) patch.due_date = due_date || null
 
   // Calculate time spent in previous status
   if (current && newStatus && newStatus !== current.status) {
@@ -190,14 +195,44 @@ export async function PATCH(
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  const proj = await getProject(id)
+
   // Slack alert on status change — only for top-level tasks
   if (current && newStatus && newStatus !== current.status && !current.parent_task_id) {
-    const proj = await getProject(id)
     if (proj?.slack_channel_id) {
-      const emoji = newStatus === 'completado' ? '✅' : newStatus === 'bloqueado' ? '🚫' : '🔄'
+      const isAlta = (updated?.priority || current?.priority) === 'alta'
+      const emoji = newStatus === 'completado' ? '✅' : newStatus === 'bloqueado' ? (isAlta ? '🔥' : '🚫') : '🔄'
+      const urgentPrefix = isAlta && newStatus === 'bloqueado' ? '🔥 *URGENTE — Tarea ALTA PRIORIDAD bloqueada*' : `${emoji} *Tarea actualizada*`
       await slackPost('chat.postMessage', {
         channel: proj.slack_channel_id,
-        text: `${emoji} *Tarea actualizada* en _${proj.nombre}_:\n> *${current.title}*\n${current.status} → *${newStatus}*${updated?.assignee ? ` — ${updated.assignee}` : ''}`,
+        text: `${urgentPrefix} en _${proj.nombre}_:\n> *${current.title}*\n${current.status} → *${newStatus}*${updated?.assignee ? ` — ${updated.assignee}` : ''}`,
+      })
+    }
+  }
+
+  // Slack alert when priority is set to 'alta' (and wasn't before)
+  if (priority === 'alta' && current?.priority !== 'alta' && !current?.parent_task_id) {
+    if (proj?.slack_channel_id) {
+      await slackPost('chat.postMessage', {
+        channel: proj.slack_channel_id,
+        text: `🔴 *Tarea marcada como ALTA PRIORIDAD* en _${proj.nombre}_:\n> *${current?.title}*${current?.assignee ? ` — ${current.assignee}` : ''}`,
+      })
+    }
+  }
+
+  // Slack alert when due_date is set and is today or overdue
+  if (due_date && !current?.parent_task_id) {
+    const today = new Date().toISOString().slice(0, 10)
+    const daysLeft = Math.ceil((new Date(due_date).getTime() - new Date(today).getTime()) / 86400000)
+    if (daysLeft <= 1 && proj?.slack_channel_id) {
+      const msg = daysLeft < 0
+        ? `🚨 *Tarea VENCIDA* (${Math.abs(daysLeft)}d de retraso) en _${proj.nombre}_:\n> *${current?.title}*${current?.assignee ? ` — ${current.assignee}` : ''}`
+        : daysLeft === 0
+        ? `⏰ *Tarea vence HOY* en _${proj.nombre}_:\n> *${current?.title}*${current?.assignee ? ` — ${current.assignee}` : ''}`
+        : `⏰ *Tarea vence mañana* en _${proj.nombre}_:\n> *${current?.title}*${current?.assignee ? ` — ${current.assignee}` : ''}`
+      await slackPost('chat.postMessage', {
+        channel: proj.slack_channel_id,
+        text: msg,
       })
     }
   }
