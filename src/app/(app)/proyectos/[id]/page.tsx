@@ -91,12 +91,12 @@ export default async function ProyectoDetalle({
   const isAdmin = profile.rol === 'admin'
   const totalActivity = mensajes.length + meetingBriefs.length
   const tabs = [
-    {key:'actividad',  label:`📋 Actividad${totalActivity>0?' ('+totalActivity+')':''}`},
     {key:'estado',     label:`🧠 Estado${alertas.length>0?' ⚠️'+alertas.length:''}`},
+    {key:'actividad',  label:`📋 Actividad${totalActivity>0?' ('+totalActivity+')':''}`},
     {key:'tareas',     label:'✅ Tareas'},
     {key:'notion',     label:'📋 Notion'},
-    ...(isAdmin ? [{key:'onboarding', label:'🚀 Onboarding'}] : []),
     {key:'perfil',     label:'🎯 KPIs'},
+    ...(isAdmin ? [{key:'onboarding', label:'👥 Equipo'}] : []),
   ]
 
   // Default tab migration: old 'mensajes' → 'actividad'
