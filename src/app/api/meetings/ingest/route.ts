@@ -124,7 +124,7 @@ function supabase() {
 }
 
 async function analyzeWithGemini(payload: IngestPayload): Promise<GeminiAnalysis> {
-  const GEMINI_KEY = process.env.GEMINI_API_KEY || 'AIzaSyBjs8PfHpaQID7r_Wo7pcAeiEuLKnGKt5A'
+  const GEMINI_KEY = process.env.GEMINI_API_KEY
 
   // Trim transcript to avoid token limits
   const transcriptSnippet = payload.transcript.slice(0, 80000)

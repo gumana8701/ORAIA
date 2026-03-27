@@ -6,7 +6,7 @@ const sb = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyBjs8PfHpaQID7r_Wo7pcAeiEuLKnGKt5A'
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 const GEMINI_MODEL   = 'gemini-2.5-flash'
 
 // ── GET /api/projects/[id]/estado ────────────────────────────────────────────
