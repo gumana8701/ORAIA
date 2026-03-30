@@ -18,7 +18,7 @@ export async function GET(
 
   // Gather all project data in parallel
   const [projRes, tasksRes, alertsRes, kpisRes, notionRes] = await Promise.all([
-    sb.from('projects').select('nombre, nicho, descripcion_empresa, objetivo_proyecto, status, total_mensajes, ultima_actividad').eq('id', id).single(),
+    sb.from('projects').select('nombre, nicho, descripcion_empresa, objetivo_proyecto, estado, prioridad, maturity_stage, total_mensajes, ultima_actividad, fecha_inicio').eq('id', id).single(),
     sb.from('project_tasks').select('title, status, completed, assignee, category, notes, time_pendiente_seconds, time_bloqueado_seconds, parent_task_id').eq('project_id', id).is('parent_task_id', null).order('order_index'),
     sb.from('alerts').select('tipo, nivel, descripcion, created_at').eq('project_id', id).eq('resuelta', false).order('created_at', { ascending: false }).limit(20),
     sb.from('project_kpis').select('kpi_text, categoria, confirmado').eq('project_id', id),
@@ -46,6 +46,10 @@ PROYECTO: ${proyecto.nombre}
 Nicho: ${proyecto.nicho || 'No especificado'}
 Descripción empresa: ${proyecto.descripcion_empresa || 'No disponible'}
 Objetivo: ${proyecto.objetivo_proyecto || 'No especificado'}
+Estado actual: ${proyecto.estado || 'No especificado'}
+Prioridad: ${proyecto.prioridad || 'No especificada'}
+Madurez: ${proyecto.maturity_stage || 'No especificada'}
+Fecha inicio: ${proyecto.fecha_inicio || 'No especificada'}
 Plan contratado: ${notion?.plan_type || 'No especificado'}
 Etapas Notion: ${notion?.etapas?.join(', ') || 'No disponible'}
 Mensajes totales: ${proyecto.total_mensajes || 0}
