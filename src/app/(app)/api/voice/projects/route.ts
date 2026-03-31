@@ -111,6 +111,10 @@ export async function GET() {
         actividad: p.actividad72h, ultimo_mensaje: p.ultima_act,
         desarrollador: p.responsable,
       })),
+    // Project list for task creation (name + id)
+    proyectos_para_tareas: proyectos
+      .filter(p => ['activo', 'en_riesgo'].includes(p.estado))
+      .map(p => ({ id: p.id, nombre: p.nombre })),
     alertas_urgentes: alertas.slice(0, 8).map(a => ({
       tipo: a.tipo, nivel: a.nivel,
       descripcion: a.descripcion?.slice(0, 120),

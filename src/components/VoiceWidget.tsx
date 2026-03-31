@@ -25,14 +25,18 @@ interface ProjectContext {
   proyectos_en_riesgo: Array<{ nombre: string; alertas: number; ultimo_mensaje: string | null; desarrollador: string }>
   proyectos_activos: Array<{ nombre: string; mensajes: number; ultimo_mensaje: string | null; desarrollador: string }>
   alertas_urgentes: Array<{ tipo: string; nivel: string; descripcion: string }>
+  proyectos_para_tareas?: Array<{ id: string; nombre: string }>
 }
 
 function formatContext(ctx: ProjectContext): string {
-  const { resumen, proyectos_en_riesgo, proyectos_activos, alertas_urgentes } = ctx
+  const { resumen, proyectos_en_riesgo, proyectos_activos, alertas_urgentes, proyectos_para_tareas } = ctx
   const fuentes = (resumen as any).fuentes_activas?.join(', ') ?? 'WhatsApp, Slack'
   const lines: string[] = [
     `RESUMEN GENERAL: ${resumen.total} proyectos — ${resumen.activos} activos, ${resumen.en_riesgo} en riesgo, ${resumen.pausados} pausados. ${resumen.alertas_abiertas} alertas abiertas. ${(resumen as any).msgs_72h ?? 0} mensajes en las últimas 72h. Fuentes de datos: ${fuentes}.`,
   ]
+  if (proyectos_para_tareas?.length) {
+    lines.push(`\nPROYECTOS DISPONIBLES PARA CREAR TAREAS:\n${proyectos_para_tareas.map(p => `  • ${p.nombre}`).join('\n')}`)
+  }
   if (proyectos_en_riesgo.length > 0) {
     lines.push(`\nPROYECTOS EN RIESGO — ATENCIÓN INMEDIATA:`)
     for (const p of proyectos_en_riesgo as any[]) {
@@ -89,6 +93,22 @@ export default function VoiceWidget() {
       // ElevenLabs sends message text in msg.message or msg.text
       const text = msg?.message ?? msg?.text ?? ''
       if (text) addEntry(source, text)
+    },
+    // Client tools — called by BOB during voice conversation
+    clientTools: {
+      create_task: async (params: any) => {
+        try {
+          const res  = await fetch('/api/voice/create-task', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify(params),
+          })
+          const data = await res.json()
+          return data.message || (data.success ? '✅ Tarea creada correctamente.' : `❌ Error: ${data.error}`)
+        } catch (e: any) {
+          return `❌ Error al crear la tarea: ${e.message}`
+        }
+      },
     },
   })
 

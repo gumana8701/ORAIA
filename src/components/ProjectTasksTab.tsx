@@ -1,6 +1,149 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 
+// ── Checklist Item Component ─────────────────────────────────────────────────
+interface ChecklistItem {
+  id: string
+  task_id: string
+  text: string
+  completed: boolean
+  completed_by: string | null
+  order_index: number
+}
+
+function ChecklistSection({ taskId, projectId }: { taskId: string; projectId: string }) {
+  const [items, setItems]       = useState<ChecklistItem[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [adding, setAdding]     = useState(false)
+  const [newText, setNewText]   = useState('')
+  const [saving, setSaving]     = useState(false)
+
+  useEffect(() => {
+    fetch(`/api/projects/${projectId}/tasks/${taskId}/checklist`)
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d)) setItems(d) })
+      .finally(() => setLoading(false))
+  }, [taskId, projectId])
+
+  const completed = items.filter(i => i.completed).length
+  const total     = items.length
+
+  async function toggleItem(item: ChecklistItem) {
+    const updated = { ...item, completed: !item.completed }
+    setItems(prev => prev.map(i => i.id === item.id ? updated : i))
+    await fetch(`/api/projects/${projectId}/tasks/${taskId}/checklist`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: item.id, completed: !item.completed, author: 'Equipo' }),
+    })
+  }
+
+  async function addItem() {
+    if (!newText.trim()) return
+    setSaving(true)
+    const res = await fetch(`/api/projects/${projectId}/tasks/${taskId}/checklist`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: newText.trim() }),
+    })
+    const data = await res.json()
+    if (data.id) { setItems(prev => [...prev, data]); setNewText(''); setAdding(false) }
+    setSaving(false)
+  }
+
+  async function deleteItem(itemId: string) {
+    setItems(prev => prev.filter(i => i.id !== itemId))
+    await fetch(`/api/projects/${projectId}/tasks/${taskId}/checklist`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemId }),
+    })
+  }
+
+  if (loading) return null
+
+  return (
+    <div style={{ marginTop: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            ✅ Checklist
+          </span>
+          {total > 0 && (
+            <span style={{ fontSize: '11px', color: completed === total ? '#22c55e' : '#64748b' }}>
+              {completed}/{total}
+            </span>
+          )}
+        </div>
+        <button
+          onClick={() => setAdding(a => !a)}
+          style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '5px', cursor: 'pointer', background: 'rgba(232,121,47,0.1)', border: '1px solid rgba(232,121,47,0.25)', color: '#E8792F', fontWeight: 600 }}
+        >
+          + Item
+        </button>
+      </div>
+
+      {/* Progress bar */}
+      {total > 0 && (
+        <div style={{ height: '3px', borderRadius: '2px', background: 'rgba(255,255,255,0.08)', marginBottom: '8px', overflow: 'hidden' }}>
+          <div style={{ height: '100%', borderRadius: '2px', background: '#22c55e', width: `${Math.round(completed / total * 100)}%`, transition: 'width 0.3s' }} />
+        </div>
+      )}
+
+      {/* Items */}
+      {items.map(item => (
+        <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0' }}>
+          <button
+            onClick={() => toggleItem(item)}
+            style={{
+              width: '16px', height: '16px', flexShrink: 0, borderRadius: '3px', cursor: 'pointer',
+              background: item.completed ? '#22c55e' : 'rgba(255,255,255,0.05)',
+              border: `1px solid ${item.completed ? '#22c55e' : 'rgba(255,255,255,0.15)'}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            {item.completed && <span style={{ fontSize: '9px', color: '#fff', fontWeight: 800 }}>✓</span>}
+          </button>
+          <span style={{ flex: 1, fontSize: '12px', color: item.completed ? '#475569' : '#cbd5e0', textDecoration: item.completed ? 'line-through' : 'none', lineHeight: 1.4 }}>
+            {item.text}
+          </span>
+          <button
+            onClick={() => deleteItem(item.id)}
+            style={{ background: 'none', border: 'none', color: '#334155', cursor: 'pointer', fontSize: '12px', padding: '0 2px', flexShrink: 0 }}
+            title="Eliminar"
+          >✕</button>
+        </div>
+      ))}
+
+      {/* Add item input */}
+      {adding && (
+        <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+          <input
+            autoFocus
+            type="text"
+            value={newText}
+            onChange={e => setNewText(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') addItem(); if (e.key === 'Escape') { setAdding(false); setNewText('') } }}
+            placeholder="Agregar item..."
+            style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '6px', padding: '5px 8px', fontSize: '12px', color: '#f1f5f9', outline: 'none' }}
+          />
+          <button
+            onClick={addItem}
+            disabled={saving || !newText.trim()}
+            style={{ padding: '4px 10px', borderRadius: '6px', background: '#22c55e', border: 'none', color: '#fff', fontSize: '11px', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+          >
+            {saving ? '...' : '✓'}
+          </button>
+          <button
+            onClick={() => { setAdding(false); setNewText('') }}
+            style={{ padding: '4px 8px', borderRadius: '6px', background: 'rgba(255,255,255,0.06)', border: 'none', color: '#64748b', fontSize: '11px', cursor: 'pointer', flexShrink: 0 }}
+          >✕</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface SubTask {
   id: string
   title: string
@@ -436,6 +579,11 @@ function TaskDrawer({
               color: '#475569', fontSize: '18px', padding: '2px', flexShrink: 0,
             }}
           >✕</button>
+        </div>
+
+        {/* Checklist */}
+        <div style={{ padding: '16px 20px 0', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <ChecklistSection taskId={task.id} projectId={projectId} />
         </div>
 
         {/* Comments */}
