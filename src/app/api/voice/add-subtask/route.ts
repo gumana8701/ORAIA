@@ -131,13 +131,15 @@ export async function POST(req: NextRequest) {
     const checklistSummary = checklist_items.length > 0
       ? `\n\nChecklist:\n${checklist_items.map((t: string) => `• ${t}`).join('\n')}`
       : ''
-    await sb.from('task_comments').insert({
-      task_id:    parent_task_id,
-      project_id: projectId,
-      author:     'BOB',
-      content:    `🤖 *BOB agregó subtarea:* "${title.trim()}" → asignada a ${assignee || 'Sin asignar'}${checklistSummary}`,
-      created_at: now,
-    }).catch(() => {}) // non-blocking
+    try {
+      await sb.from('task_comments').insert({
+        task_id:    parent_task_id,
+        project_id: projectId,
+        author:     'BOB',
+        content:    `🤖 *BOB agregó subtarea:* "${title.trim()}" → asignada a ${assignee || 'Sin asignar'}${checklistSummary}`,
+        created_at: now,
+      })
+    } catch (_) { /* non-blocking */ }
 
     // Send Slack notification
     const { data: proj } = await sb
