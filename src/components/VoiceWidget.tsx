@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useConversation } from '@11labs/react'
+import { useVoiceProject } from '@/lib/VoiceProjectContext'
 
 const AGENT_ID = 'agent_3701kk4s3g38f2rspd33affqa1b4'
 
@@ -28,12 +29,19 @@ interface ProjectContext {
   proyectos_para_tareas?: Array<{ id: string; nombre: string }>
 }
 
-function formatContext(ctx: ProjectContext): string {
+function formatContext(ctx: ProjectContext, currentProject?: { projectId: string; projectName: string } | null): string {
   const { resumen, proyectos_en_riesgo, proyectos_activos, alertas_urgentes, proyectos_para_tareas } = ctx
   const fuentes = (resumen as any).fuentes_activas?.join(', ') ?? 'WhatsApp, Slack'
-  const lines: string[] = [
-    `RESUMEN GENERAL: ${resumen.total} proyectos — ${resumen.activos} activos, ${resumen.en_riesgo} en riesgo, ${resumen.pausados} pausados. ${resumen.alertas_abiertas} alertas abiertas. ${(resumen as any).msgs_72h ?? 0} mensajes en las últimas 72h. Fuentes de datos: ${fuentes}.`,
-  ]
+  const lines: string[] = []
+
+  // If inside a specific project, lead with that context
+  if (currentProject) {
+    lines.push(`CONTEXTO ACTUAL: El usuario está viendo el proyecto "${currentProject.projectName}" (ID: ${currentProject.projectId}). Si quiere crear una tarea, asumir que es para ESTE proyecto a menos que diga explícitamente otro. Si quiere crear una tarea para otro proyecto, debe navegar a ese proyecto primero.`)
+    lines.push('')
+  }
+
+  lines.push(`RESUMEN GENERAL: ${resumen.total} proyectos — ${resumen.activos} activos, ${resumen.en_riesgo} en riesgo, ${resumen.pausados} pausados. ${resumen.alertas_abiertas} alertas abiertas. ${(resumen as any).msgs_72h ?? 0} mensajes en las últimas 72h. Fuentes de datos: ${fuentes}.`)
+
   if (proyectos_para_tareas?.length) {
     lines.push(`\nPROYECTOS DISPONIBLES PARA CREAR TAREAS:\n${proyectos_para_tareas.map(p => `  • ${p.nombre}`).join('\n')}`)
   }
@@ -64,6 +72,7 @@ function formatContext(ctx: ProjectContext): string {
 let transcriptIdCounter = 0
 
 export default function VoiceWidget() {
+  const { currentProject }            = useVoiceProject()
   const [open, setOpen]               = useState(false)
   const [status, setStatus]           = useState<ConvStatus>('idle')
   const [context, setContext]         = useState<ProjectContext | null>(null)
@@ -137,7 +146,7 @@ export default function VoiceWidget() {
       await conversation.startSession({
         agentId: AGENT_ID,
         connectionType: 'webrtc' as const,
-        dynamicVariables: { project_context: formatContext(context) },
+        dynamicVariables: { project_context: formatContext(context, currentProject) },
       })
     } catch (err) {
       console.error('Failed to start:', err)

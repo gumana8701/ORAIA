@@ -10,6 +10,8 @@ import ProjectKPIsEditor from '@/components/ProjectKPIsEditor'
 import NotionTasksTab from '@/components/NotionTasksTab'
 import ProjectChat from '@/components/ProjectChat'
 import ProjectTasksTab from '@/components/ProjectTasksTab'
+import TeamStatsTab from '@/components/TeamStatsTab'
+import SetVoiceProject from '@/components/SetVoiceProject'
 import { getSessionProfile } from '@/lib/auth'
 import ProjectMetaEditor from '@/components/ProjectMetaEditor'
 import ProjectDocs from '@/components/ProjectDocs'
@@ -106,6 +108,9 @@ export default async function ProyectoDetalle({
 
   return (
     <div>
+      {/* Tell BOB which project is active */}
+      <SetVoiceProject projectId={id} projectName={proyecto.nombre} />
+
       {/* Navigation bar */}
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'20px',gap:'8px'}}>
         {/* Back button */}
@@ -342,18 +347,32 @@ export default async function ProyectoDetalle({
         <NotionTasksTab projectId={id} />
       )}
 
-      {/* Tab: Onboarding / Developer Assignment */}
+      {/* Tab: Equipo — Team stats + assignment */}
       {tab==='onboarding' && (
         <div>
-          <div style={{marginBottom:'20px'}}>
-            <h2 style={{fontSize:'15px',fontWeight:700,color:'#fff',margin:'0 0 4px'}}>Asignar Desarrolladores</h2>
-            <p style={{fontSize:'13px',color:'#A0AEC0',margin:0}}>Enzo siempre está asignado como supervisor. Asigna uno o más desarrolladores adicionales.</p>
+          {/* Team task stats */}
+          <div style={{marginBottom:'24px'}}>
+            <h2 style={{fontSize:'15px',fontWeight:700,color:'#fff',margin:'0 0 16px'}}>📊 Estadísticas por miembro</h2>
+            <TeamStatsTab
+              projectId={id}
+              assignedDevs={assignedDevs.map((d:any) => ({ nombre: d.nombre, color: d.color, emoji: d.emoji }))}
+            />
           </div>
-          <DeveloperAssignerWrapper
-            projectId={id}
-            allDevelopers={allDevelopers}
-            assigned={assigned as any}
-          />
+
+          {/* Developer assignment */}
+          {isAdmin && (
+            <div style={{borderTop:'1px solid rgba(255,255,255,0.06)',paddingTop:'24px'}}>
+              <div style={{marginBottom:'16px'}}>
+                <h2 style={{fontSize:'15px',fontWeight:700,color:'#fff',margin:'0 0 4px'}}>👥 Asignar desarrolladores</h2>
+                <p style={{fontSize:'13px',color:'#A0AEC0',margin:0}}>Enzo siempre está asignado como supervisor.</p>
+              </div>
+              <DeveloperAssignerWrapper
+                projectId={id}
+                allDevelopers={allDevelopers}
+                assigned={assigned as any}
+              />
+            </div>
+          )}
         </div>
       )}
 
