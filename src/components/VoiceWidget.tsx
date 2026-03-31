@@ -107,6 +107,8 @@ export default function VoiceWidget() {
     clientTools: {
       create_task: async (params: any) => {
         try {
+          // Inject current project if not specified
+          if (!params.project_name && currentProject) params.project_name = currentProject.projectName
           const res  = await fetch('/api/voice/create-task', {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -116,6 +118,48 @@ export default function VoiceWidget() {
           return data.message || (data.success ? '✅ Tarea creada correctamente.' : `❌ Error: ${data.error}`)
         } catch (e: any) {
           return `❌ Error al crear la tarea: ${e.message}`
+        }
+      },
+
+      get_project_tasks: async (params: any) => {
+        try {
+          // Default to current project
+          if (!params.project_name && !params.project_id && currentProject) {
+            params.project_id   = currentProject.projectId
+            params.project_name = currentProject.projectName
+          }
+          const qs  = new URLSearchParams({
+            project_name:   params.project_name   || '',
+            project_id:     params.project_id     || '',
+            include_closed: params.include_closed ? 'true' : 'false',
+          })
+          const res  = await fetch(`/api/voice/get-project-tasks?${qs}`)
+          const data = await res.json()
+          if (data.error) return `❌ ${data.error}`
+          // Return compact text summary for BOB
+          const openList = (data.open_tasks || []).map((t: any) =>
+            `[ID:${t.id}] "${t.title}" — ${t.status}, asignado: ${t.assignee || 'nadie'}, subtareas: ${t.subtasks?.total || 0}`
+          ).join('\n')
+          const closedList = (data.closed_tasks || []).slice(0, 10).map((t: any) =>
+            `[ID:${t.id}] "${t.title}" — COMPLETADA, asignado: ${t.assignee || 'nadie'}`
+          ).join('\n')
+          return `TAREAS ABIERTAS (${data.open_tasks?.length || 0}):\n${openList || 'Ninguna'}${closedList ? `\n\nTAREAS CERRADAS RECIENTES:\n${closedList}` : ''}`
+        } catch (e: any) {
+          return `❌ Error: ${e.message}`
+        }
+      },
+
+      add_subtask: async (params: any) => {
+        try {
+          const res  = await fetch('/api/voice/add-subtask', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify(params),
+          })
+          const data = await res.json()
+          return data.message || (data.success ? '✅ Subtarea creada.' : `❌ Error: ${data.error}`)
+        } catch (e: any) {
+          return `❌ Error: ${e.message}`
         }
       },
     },
