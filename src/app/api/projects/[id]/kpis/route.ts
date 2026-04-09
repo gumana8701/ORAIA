@@ -82,3 +82,44 @@ export async function POST(
 
   return NextResponse.json({ kpi, alertClosed: !!openAlert })
 }
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+  const { kpi_id, confirmado } = await req.json()
+
+  if (!kpi_id) return NextResponse.json({ error: 'kpi_id required' }, { status: 400 })
+
+  const { data, error } = await sb
+    .from('project_kpis')
+    .update({ confirmado })
+    .eq('id', kpi_id)
+    .eq('project_id', id)
+    .select()
+    .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ kpi: data })
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+  const { searchParams } = new URL(req.url)
+  const kpi_id = searchParams.get('kpi_id')
+
+  if (!kpi_id) return NextResponse.json({ error: 'kpi_id required' }, { status: 400 })
+
+  const { error } = await sb
+    .from('project_kpis')
+    .delete()
+    .eq('id', kpi_id)
+    .eq('project_id', id)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}

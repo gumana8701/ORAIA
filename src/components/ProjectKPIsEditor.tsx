@@ -1,6 +1,5 @@
 'use client'
 import { useState } from 'react'
-import { createClient } from '@supabase/supabase-js'
 
 interface KPI {
   id: string
@@ -26,12 +25,7 @@ const CATEGORIAS = [
 
 const catColor = (cat: string) => CATEGORIAS.find(c => c.value === cat)?.color ?? '#a78bfa'
 
-function sb() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
+
 
 export default function ProjectKPIsEditor({ projectId, initialKpis }: Props) {
   const [kpis, setKpis] = useState<KPI[]>(initialKpis)
@@ -44,29 +38,47 @@ export default function ProjectKPIsEditor({ projectId, initialKpis }: Props) {
   async function addKpi() {
     if (!newText.trim()) return
     setSaving(true)
-    const { data, error } = await sb()
-      .from('project_kpis')
-      .insert({ project_id: projectId, kpi_text: newText.trim(), meta: newMeta.trim() || null, categoria: newCat, confirmado: false })
-      .select()
-      .single()
-    if (!error && data) {
-      setKpis(prev => [...prev, data as KPI])
-      setNewText(''); setNewMeta(''); setNewCat('general'); setAdding(false)
+    try {
+      const res = await fetch(`/api/projects/${projectId}/kpis`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kpi_text: newText.trim(),
+          categoria: newCat,
+          meta: newMeta.trim() || null,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        console.error('Error guardando KPI:', json.error)
+        alert(`Error: ${json.error}`)
+      } else if (json.kpi) {
+        setKpis(prev => [...prev, json.kpi as KPI])
+        setNewText(''); setNewMeta(''); setNewCat('general'); setAdding(false)
+      }
+    } catch (err) {
+      console.error('Error de red al guardar KPI:', err)
+      alert('Error de red. Intenta de nuevo.')
     }
     setSaving(false)
   }
 
   async function toggleConfirmado(kpi: KPI) {
-    const { error } = await sb()
-      .from('project_kpis')
-      .update({ confirmado: !kpi.confirmado })
-      .eq('id', kpi.id)
-    if (!error) setKpis(prev => prev.map(k => k.id === kpi.id ? { ...k, confirmado: !k.confirmado } : k))
+    const res = await fetch(`/api/projects/${projectId}/kpis`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kpi_id: kpi.id, confirmado: !kpi.confirmado }),
+    })
+    if (res.ok) {
+      setKpis(prev => prev.map(k => k.id === kpi.id ? { ...k, confirmado: !kpi.confirmado } : k))
+    }
   }
 
-  async function deleteKpi(id: string) {
-    const { error } = await sb().from('project_kpis').delete().eq('id', id)
-    if (!error) setKpis(prev => prev.filter(k => k.id !== id))
+  async function deleteKpi(kpiId: string) {
+    const res = await fetch(`/api/projects/${projectId}/kpis?kpi_id=${kpiId}`, {
+      method: 'DELETE',
+    })
+    if (res.ok) setKpis(prev => prev.filter(k => k.id !== kpiId))
   }
 
   const confirmed = kpis.filter(k => k.confirmado).length
