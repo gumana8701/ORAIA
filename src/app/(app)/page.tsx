@@ -102,7 +102,7 @@ export default async function Dashboard({
       <div style={{ marginBottom: '20px', position: 'relative', zIndex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
           <h1 className="headline headline-gradient" style={{ margin: 0 }}>
-            Operations Dashboard
+            Panel de Operaciones
           </h1>
           <span style={{
             fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '6px',

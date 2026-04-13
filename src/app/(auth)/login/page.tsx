@@ -57,7 +57,7 @@ function LoginForm() {
             fontSize: '26px', boxShadow: '0 8px 24px rgba(232,121,47,0.3)',
           }}>🟠</div>
           <h1 style={{ color: '#fff', fontSize: '22px', fontWeight: 800, margin: '0 0 4px' }}>ORAIA</h1>
-          <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>Project Intelligence Platform</p>
+          <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>Plataforma de Inteligencia de Proyectos</p>
         </div>
 
         <form onSubmit={handleLogin}>

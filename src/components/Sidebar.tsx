@@ -5,15 +5,15 @@ import { useTheme } from '@/lib/ThemeContext'
 import { useState, useEffect } from 'react'
 
 const allNav = [
-  { href: '/insights',            label: 'Insights',     icon: '📊', adminOnly: false },
-  { href: '/',                    label: 'Proyectos',    icon: '📂', adminOnly: false },
+  { href: '/insights',            label: 'Insights',         icon: '📊', adminOnly: false },
+  { href: '/',                    label: 'Proyectos',        icon: '📂', adminOnly: false },
   // Alertas removido del menú — integrado en tab "Estado del Proyecto" por proyecto
-  { href: '/admin/onboarding',    label: 'Onboarding',   icon: '🚀', adminOnly: true  },
-  { href: '/admin/usuarios',      label: 'Usuarios',     icon: '🔐', adminOnly: true  },
-  { href: '/admin/notion-link',   label: 'Notion Link',  icon: '📋', adminOnly: false },
-  { href: '/admin/pm-board',      label: 'PM Board',     icon: '📊', adminOnly: false },
-  { href: '/admin/health',        label: 'Health Check', icon: '🔍', adminOnly: false },
-  { href: '/admin/preview',       label: 'Ver como…',    icon: '👁️',  adminOnly: true  },
+  { href: '/admin/onboarding',    label: 'Incorporación',    icon: '🚀', adminOnly: true  },
+  { href: '/admin/usuarios',      label: 'Usuarios',         icon: '🔐', adminOnly: true  },
+  { href: '/admin/notion-link',   label: 'Enlace Notion',    icon: '📋', adminOnly: false },
+  { href: '/admin/pm-board',      label: 'Tablero PM',       icon: '📊', adminOnly: false },
+  { href: '/admin/health',        label: 'Estado del Sistema', icon: '🔍', adminOnly: false },
+  { href: '/admin/preview',       label: 'Ver como…',        icon: '👁️',  adminOnly: true  },
 ]
 
 export default function Sidebar({ role = 'developer' }: { role?: string }) {
